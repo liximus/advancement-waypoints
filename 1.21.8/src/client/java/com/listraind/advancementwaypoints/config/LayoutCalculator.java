@@ -8,27 +8,19 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.*;
 
 public class LayoutCalculator {
-
     private static final float STEP_X = 1.0f;
     private static final float STEP_Y = 1.0f;
     private static final float MIN_DIST_X = 0.9f;
     private static final float MIN_DIST_Y = 0.9f;
 
-    private final Map<String, float[]> vanillaOverrides = new HashMap<>();
     private final Map<String, float[]> computedPositions = new LinkedHashMap<>();
-
-    public Map<String, float[]> getVanillaOverrides() {
-        return vanillaOverrides;
-    }
+    private final List<float[]> allOccupied = new ArrayList<>();
 
     public Map<String, float[]> getComputedPositions() {
         return computedPositions;
     }
 
-    private final List<float[]> allOccupied = new ArrayList<>();
-
     public void calculate(List<JsonObject> customAdvancements, AdvancementTree tree) {
-        vanillaOverrides.clear();
         computedPositions.clear();
         allOccupied.clear();
 
@@ -46,8 +38,7 @@ public class LayoutCalculator {
 
         for (JsonObject obj : customAdvancements) {
             String id = obj.has("id") ? obj.get("id").getAsString() : "";
-            String parentStr = obj.has("parent") && !obj.get("parent").isJsonNull()
-                    ? obj.get("parent").getAsString() : "";
+            String parentStr = obj.has("parent") && !obj.get("parent").isJsonNull() ? obj.get("parent").getAsString() : "";
 
             parentMap.put(id, parentStr);
 
@@ -61,24 +52,18 @@ public class LayoutCalculator {
         Map<String, float[]> knownPositions = new HashMap<>();
 
         for (String rootId : roots) {
-            JsonObject rootObj = byId.get(rootId);
             String parentStr = parentMap.getOrDefault(rootId, "");
-
             String treeRootId = findRootId(parentStr.isEmpty() ? rootId : parentStr, tree);
             if (!treeRootId.isEmpty()) {
                 collectAllVanillaPositions(treeRootId, tree, knownPositions);
             }
         }
 
-        for (float[] pos : knownPositions.values()) {
-            allOccupied.add(pos);
-        }
+        allOccupied.addAll(knownPositions.values());
 
         for (String rootId : roots) {
             String parentStr = parentMap.getOrDefault(rootId, "");
-
-            float parentX = 0f;
-            float parentY = 0f;
+            float parentX = 0f, parentY = 0f;
 
             if (!parentStr.isEmpty()) {
                 float[] pp = resolvePosition(parentStr, tree, knownPositions);
@@ -87,26 +72,98 @@ public class LayoutCalculator {
                     parentY = pp[1];
                 }
             }
-
             layoutSubtree(rootId, parentX, parentY, childrenMap, knownPositions, tree);
+        }
+
+        normalizePositions(roots, parentMap, childrenMap, tree);
+    }
+
+    private void normalizePositions(Set<String> roots, Map<String, String> parentMap, Map<String, List<String>> childrenMap, AdvancementTree tree) {
+        Map<String, List<String>> tabToCustomRoots = new LinkedHashMap<>();
+
+        for (String rootId : roots) {
+            String parentStr = parentMap.getOrDefault(rootId, "");
+            String treeRootId = findRootId(parentStr.isEmpty() ? rootId : parentStr, tree);
+            tabToCustomRoots.computeIfAbsent(treeRootId.isEmpty() ? "__unknown__" : treeRootId, k -> new ArrayList<>()).add(rootId);
+        }
+
+        for (Map.Entry<String, List<String>> entry : tabToCustomRoots.entrySet()) {
+            Set<String> allCustomInTab = new LinkedHashSet<>();
+            for (String rootId : entry.getValue()) {
+                collectAllCustomIds(rootId, childrenMap, allCustomInTab);
+            }
+
+            if (allCustomInTab.isEmpty()) continue;
+
+            float targetMinX = 0f, targetMinY = 0f;
+
+            if (!"__unknown__".equals(entry.getKey())) {
+                try {
+                    AdvancementNode rootNode = tree.get(ResourceLocation.parse(entry.getKey()));
+                    if (rootNode != null) {
+                        float[] bounds = getVanillaMinBounds(rootNode);
+                        targetMinX = Math.max(0f, bounds[0]);
+                        targetMinY = Math.max(0f, bounds[1]);
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            float customMinX = Float.MAX_VALUE, customMinY = Float.MAX_VALUE;
+
+            for (String id : allCustomInTab) {
+                float[] pos = computedPositions.get(id);
+                if (pos != null) {
+                    customMinX = Math.min(customMinX, pos[0]);
+                    customMinY = Math.min(customMinY, pos[1]);
+                }
+            }
+
+            float shiftX = customMinX < targetMinX ? targetMinX - customMinX : 0f;
+            float shiftY = customMinY < targetMinY ? targetMinY - customMinY : 0f;
+
+            if (shiftX != 0f || shiftY != 0f) {
+                for (String id : allCustomInTab) {
+                    float[] pos = computedPositions.get(id);
+                    if (pos != null) {
+                        pos[0] += shiftX;
+                        pos[1] += shiftY;
+                    }
+                }
+            }
         }
     }
 
-    private void layoutSubtree(String rootId, float anchorX, float anchorY,
-                               Map<String, List<String>> childrenMap,
-                               Map<String, float[]> knownPositions, AdvancementTree tree) {
+    private void collectAllCustomIds(String nodeId, Map<String, List<String>> childrenMap, Set<String> result) {
+        result.add(nodeId);
+        for (String childId : childrenMap.getOrDefault(nodeId, Collections.emptyList())) {
+            collectAllCustomIds(childId, childrenMap, result);
+        }
+    }
 
+    private float[] getVanillaMinBounds(AdvancementNode rootNode) {
+        float[] min = {Float.MAX_VALUE, Float.MAX_VALUE};
+        collectBoundsRecursive(rootNode, min);
+        if (min[0] == Float.MAX_VALUE) return new float[]{0f, 0f};
+        return min;
+    }
+
+    private void collectBoundsRecursive(AdvancementNode node, float[] min) {
+        node.holder().value().display().ifPresent(d -> {
+            min[0] = Math.min(min[0], d.getX());
+            min[1] = Math.min(min[1], d.getY());
+        });
+        for (AdvancementNode child : node.children()) {
+            collectBoundsRecursive(child, min);
+        }
+    }
+
+    private void layoutSubtree(String rootId, float anchorX, float anchorY, Map<String, List<String>> childrenMap, Map<String, float[]> knownPositions, AdvancementTree tree) {
         Map<String, Integer> subtreeWidths = new HashMap<>();
         measureAllWidths(rootId, childrenMap, subtreeWidths);
-
         layoutNodeRecursive(rootId, anchorX + STEP_X, anchorY, childrenMap, subtreeWidths, knownPositions, tree);
     }
 
-    private void layoutNodeRecursive(String nodeId, float desiredX, float desiredY,
-                                     Map<String, List<String>> childrenMap,
-                                     Map<String, Integer> subtreeWidths,
-                                     Map<String, float[]> knownPositions, AdvancementTree tree) {
-
+    private void layoutNodeRecursive(String nodeId, float desiredX, float desiredY, Map<String, List<String>> childrenMap, Map<String, Integer> subtreeWidths, Map<String, float[]> knownPositions, AdvancementTree tree) {
         float x = desiredX;
         float y = desiredY;
 
@@ -117,15 +174,19 @@ public class LayoutCalculator {
         List<String> children = childrenMap.getOrDefault(nodeId, Collections.emptyList());
 
         if (!children.isEmpty()) {
+            int maxIterations = 100;
+            int iteration = 0;
             boolean needShift = true;
-            while (needShift) {
+
+            while (needShift && iteration < maxIterations) {
                 needShift = false;
+                iteration++;
+
                 int totalWidth = subtreeWidths.getOrDefault(nodeId, 1);
                 float blockStartY = y - (totalWidth - 1) * STEP_Y / 2.0f;
 
                 for (int i = 0; i < totalWidth; i++) {
-                    float checkY = blockStartY + i * STEP_Y;
-                    if (isOccupied(x + STEP_X, checkY)) {
+                    if (isOccupied(x + STEP_X, blockStartY + i * STEP_Y)) {
                         x += STEP_X;
                         while (isOccupied(x, y)) {
                             x += STEP_X;
@@ -152,28 +213,22 @@ public class LayoutCalculator {
             totalChildLeaves += w;
         }
 
-        float childBlockStartY = y - (totalChildLeaves - 1) * STEP_Y / 2.0f;
+        float currentY = y - (totalChildLeaves - 1) * STEP_Y / 2.0f;
         float childX = x + STEP_X;
 
-        float currentY = childBlockStartY;
         for (String childId : children) {
             int childW = childWidthMap.get(childId);
-            float childCenterY = currentY + (childW - 1) * STEP_Y / 2.0f;
-
-            layoutNodeRecursive(childId, childX, childCenterY, childrenMap, subtreeWidths, knownPositions, tree);
-
+            layoutNodeRecursive(childId, childX, currentY + (childW - 1) * STEP_Y / 2.0f, childrenMap, subtreeWidths, knownPositions, tree);
             currentY += childW * STEP_Y;
         }
     }
 
-    private void measureAllWidths(String nodeId, Map<String, List<String>> childrenMap,
-                                  Map<String, Integer> result) {
+    private void measureAllWidths(String nodeId, Map<String, List<String>> childrenMap, Map<String, Integer> result) {
         List<String> children = childrenMap.getOrDefault(nodeId, Collections.emptyList());
         if (children.isEmpty()) {
             result.put(nodeId, 1);
             return;
         }
-
         int total = 0;
         for (String childId : children) {
             measureAllWidths(childId, childrenMap, result);
@@ -206,12 +261,10 @@ public class LayoutCalculator {
                 return result[0];
             }
         } catch (Exception ignored) {}
-
         return null;
     }
 
-    private void collectAllVanillaPositions(String rootId, AdvancementTree tree,
-                                            Map<String, float[]> positions) {
+    private void collectAllVanillaPositions(String rootId, AdvancementTree tree, Map<String, float[]> positions) {
         try {
             AdvancementNode rootNode = tree.get(ResourceLocation.parse(rootId));
             if (rootNode != null) {
@@ -221,10 +274,7 @@ public class LayoutCalculator {
     }
 
     private void collectRecursive(AdvancementNode node, Map<String, float[]> positions) {
-        node.holder().value().display().ifPresent(d -> {
-            positions.put(node.holder().id().toString(), new float[]{d.getX(), d.getY()});
-        });
-
+        node.holder().value().display().ifPresent(d -> positions.put(node.holder().id().toString(), new float[]{d.getX(), d.getY()}));
         for (AdvancementNode child : node.children()) {
             collectRecursive(child, positions);
         }
@@ -232,11 +282,9 @@ public class LayoutCalculator {
 
     private String findRootId(String parentId, AdvancementTree tree) {
         if (parentId == null || parentId.isEmpty()) return "";
-
         try {
             AdvancementNode node = tree.get(ResourceLocation.parse(parentId));
             if (node == null) return parentId;
-
             AdvancementNode current = node;
             while (current.parent() != null) {
                 current = current.parent();
@@ -246,4 +294,6 @@ public class LayoutCalculator {
             return parentId;
         }
     }
+
+
 }

@@ -1,5 +1,6 @@
 package com.listraind.advancementwaypoints.mixin.client;
 
+import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.AdvancementWaypointsClient.ParsedAdvancement;
 import com.listraind.advancementwaypoints.advancementMixinHelpers.ICustomAdvancementApplier;
 import com.listraind.advancementwaypoints.config.AdvancementLoader;
@@ -33,18 +34,23 @@ public abstract class ClientAdvancementsMixin implements ICustomAdvancementAppli
 
     @Inject(method = "update", at = @At("RETURN"))
     private void onUpdate(ClientboundUpdateAdvancementsPacket packet, CallbackInfo ci) {
-        this.injectCustomAdvancements();
+        this.advWaypoint_injectCustomAdvancements();
     }
 
-    @Unique
-    public void injectCustomAdvancements() {
+    public void advWaypoint_injectCustomAdvancements() {
         try {
             if (!advWp_injected.isEmpty()) {
+                Set<ResourceLocation> toRemove = new HashSet<>();
                 for (ResourceLocation id : advWp_injected) {
                     AdvancementNode node = this.tree.get(id);
-                    if (node != null) this.progress.remove(node.holder());
+                    if (node != null) {
+                        this.progress.remove(node.holder());
+                        toRemove.add(id);
+                    }
                 }
-                this.tree.remove(advWp_injected);
+                if (!toRemove.isEmpty()) {
+                    this.tree.remove(toRemove);
+                }
                 advWp_injected.clear();
             }
 
@@ -117,9 +123,12 @@ public abstract class ClientAdvancementsMixin implements ICustomAdvancementAppli
     @Unique
     private void refreshUI() {
         if (this.listener != null) {
-            ClientAdvancements.Listener cur = this.listener;
-            this.setListener(null);
-            this.setListener(cur);
+            for (ResourceLocation id : advWp_injected) {
+                AdvancementNode node = this.tree.get(id);
+                if (node != null) {
+                    this.listener.onUpdateAdvancementProgress(node, this.progress.get(node.holder()));
+                }
+            }
         }
     }
 }
