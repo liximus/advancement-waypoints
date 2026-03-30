@@ -8,11 +8,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(AdvancementWidget.class)
 public interface AdvancementWidgetAccessor {
-
-    @Accessor
-    AdvancementNode getAdvancementNode();
-
-    // На случай если isMouseOver имеет ограниченный доступ
-    @Invoker
-    boolean invokeIsMouseOver(int scrollX, int scrollY, int mouseX, int mouseY);
+    @Accessor AdvancementNode getAdvancementNode();
+    @Invoker boolean invokeIsMouseOver(int scrollX, int scrollY, int mouseX, int mouseY);
 }

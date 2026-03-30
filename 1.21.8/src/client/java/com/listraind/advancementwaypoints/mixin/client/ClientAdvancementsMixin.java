@@ -1,12 +1,11 @@
 package com.listraind.advancementwaypoints.mixin.client;
 
 import com.google.gson.JsonObject;
-import com.listraind.advancementwaypoints.AdvancementWaypoints;
-import com.listraind.advancementwaypoints.AdvancementWaypointsClient.ParsedAdvancement;
-import com.listraind.advancementwaypoints.advancementMixinHelpers.ICustomAdvancementApplier;
-import com.listraind.advancementwaypoints.config.AdvancementLoader;
-import com.listraind.advancementwaypoints.config.ConfigManager;
-import com.listraind.advancementwaypoints.mixin.client.DisplayInfoAccessor;
+import com.listraind.advancementwaypoints.advancement.AdvancementInjector;
+import com.listraind.advancementwaypoints.advancement.WaypointData;
+import com.listraind.advancementwaypoints.api.IAdvancementInjector;
+import com.listraind.advancementwaypoints.config.ConfigIO;
+import com.listraind.advancementwaypoints.config.WaypointStorage;
 import net.minecraft.advancements.*;
 import net.minecraft.advancements.critereon.ImpossibleTrigger;
 import net.minecraft.client.multiplayer.ClientAdvancements;
@@ -28,97 +27,90 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.*;
 
 @Mixin(ClientAdvancements.class)
-public abstract class ClientAdvancementsMixin implements ICustomAdvancementApplier {
+public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
 
-    @Unique private final Set<ResourceLocation> advWp_injected = new HashSet<>();
-    @Unique private final Map<ResourceLocation, float[]> advWp_vanillaOriginals = new HashMap<>();
+    @Unique private final Set<ResourceLocation> injected = new HashSet<>();
+    @Unique private final Map<ResourceLocation, float[]> vanillaOriginals = new HashMap<>();
 
     @Final @Shadow private AdvancementTree tree;
     @Final @Shadow private Map<AdvancementHolder, AdvancementProgress> progress;
     @Shadow private ClientAdvancements.Listener listener;
-    @Shadow public abstract void setListener(ClientAdvancements.Listener listener);
 
     @Inject(method = "update", at = @At("RETURN"))
-    private void onUpdate(ClientboundUpdateAdvancementsPacket packet, CallbackInfo ci) {
-        this.advWaypoint_injectCustomAdvancements();
+    private void onUpdate(ClientboundUpdateAdvancementsPacket pkt, CallbackInfo ci) {
+        advWaypoint_inject();
     }
 
-    public void advWaypoint_injectCustomAdvancements() {
+    @Override
+    public void advWaypoint_inject() {
         try {
-            if (!advWp_injected.isEmpty()) {
-                Set<ResourceLocation> toRemove = new HashSet<>();
-                for (ResourceLocation id : advWp_injected) {
-                    AdvancementNode node = this.tree.get(id);
-                    if (node != null) {
-                        this.progress.remove(node.holder());
-                        toRemove.add(id);
-                    }
+            if (!injected.isEmpty()) {
+                for (ResourceLocation id : injected) {
+                    AdvancementNode n = tree.get(id);
+                    if (n != null) progress.remove(n.holder());
                 }
-                if (!toRemove.isEmpty()) {
-                    this.tree.remove(toRemove);
-                }
-                advWp_injected.clear();
+                tree.remove(injected);
+                injected.clear();
             }
 
-            for (var entry : advWp_vanillaOriginals.entrySet()) {
-                AdvancementNode node = this.tree.get(entry.getKey());
-                if (node != null) node.holder().value().display().ifPresent(d -> {
-                    float[] o = entry.getValue();
+            for (var e : vanillaOriginals.entrySet()) {
+                AdvancementNode n = tree.get(e.getKey());
+                if (n != null) n.holder().value().display().ifPresent(d -> {
+                    float[] o = e.getValue();
                     d.setLocation(o[0], o[1]);
                 });
             }
-            advWp_vanillaOriginals.clear();
+            vanillaOriginals.clear();
 
             applyOverrides();
 
-            AdvancementLoader.LoadResult result = AdvancementLoader.loadAll(this.tree);
-            if (result.advancements.isEmpty()) { refreshUI(); return; }
+            AdvancementInjector.LoadResult result = AdvancementInjector.load(tree);
+            if (result.advancements().isEmpty()) { refreshUI(); return; }
 
             List<AdvancementHolder> holders = new ArrayList<>();
-            for (ParsedAdvancement pa : result.advancements) {
-                ResourceLocation id = pa.resourceLocation();
-                Optional<ResourceLocation> bgLoc = pa.background() != null && !pa.background().isEmpty()
-                        ? Optional.of(ResourceLocation.parse(pa.background())) : Optional.empty();
+            for (WaypointData w : result.advancements()) {
+                ResourceLocation id = w.resourceLocation();
+                Optional<ResourceLocation> bg = w.background() != null && !w.background().isEmpty()
+                        ? Optional.of(ResourceLocation.parse(w.background())) : Optional.empty();
 
                 DisplayInfo display = new DisplayInfo(
-                        pa.itemStack(), Component.literal(pa.title()), Component.literal(pa.description()),
-                        bgLoc.map(ClientAsset::new), pa.frameType(), true, true, false
+                        w.itemStack(), Component.literal(w.title()), Component.literal(w.description()),
+                        bg.map(ClientAsset::new), w.frameType(), true, true, false
                 );
-                display.setLocation(pa.x(), pa.y());
+                display.setLocation(w.x(), w.y());
 
                 Map<String, Criterion<?>> criteria = Map.of(
                         "auto", new Criterion<>(new ImpossibleTrigger(), new ImpossibleTrigger.TriggerInstance())
                 );
-                Optional<ResourceLocation> parentId = pa.parent() != null && !pa.parent().isEmpty()
-                        ? Optional.of(ResourceLocation.parse(pa.parent())) : Optional.empty();
+                Optional<ResourceLocation> parent = w.parent() != null && !w.parent().isEmpty()
+                        ? Optional.of(ResourceLocation.parse(w.parent())) : Optional.empty();
 
                 holders.add(new AdvancementHolder(id, new Advancement(
-                        parentId, Optional.of(display), AdvancementRewards.EMPTY,
+                        parent, Optional.of(display), AdvancementRewards.EMPTY,
                         criteria, new AdvancementRequirements(List.of(List.of("auto"))),
                         false, Optional.empty()
                 )));
-                advWp_injected.add(id);
+                injected.add(id);
             }
 
-            this.tree.addAll(holders);
+            tree.addAll(holders);
 
-            for (AdvancementHolder holder : holders) {
-                AdvancementNode node = this.tree.get(holder.id());
-                if (node != null) {
-                    AdvancementProgress prog = new AdvancementProgress();
-                    prog.update(node.advancement().requirements());
-                    prog.grantProgress("auto");
-                    this.progress.put(node.holder(), prog);
+            for (AdvancementHolder h : holders) {
+                AdvancementNode n = tree.get(h.id());
+                if (n != null) {
+                    AdvancementProgress p = new AdvancementProgress();
+                    p.update(n.advancement().requirements());
+                    p.grantProgress("auto");
+                    progress.put(n.holder(), p);
                 }
             }
 
-            for (var entry : result.vanillaOverrides.entrySet()) {
-                ResourceLocation vid = ResourceLocation.parse(entry.getKey());
-                AdvancementNode node = this.tree.get(vid);
-                if (node != null) node.holder().value().display().ifPresent(d -> {
-                    advWp_vanillaOriginals.put(vid, new float[]{d.getX(), d.getY()});
-                    float[] pos = entry.getValue();
-                    d.setLocation(pos[0], pos[1]);
+            for (var e : result.vanillaOverrides().entrySet()) {
+                ResourceLocation vid = ResourceLocation.parse(e.getKey());
+                AdvancementNode n = tree.get(vid);
+                if (n != null) n.holder().value().display().ifPresent(d -> {
+                    vanillaOriginals.put(vid, new float[]{d.getX(), d.getY()});
+                    d.setLocation(e.getValue()[0], e.getValue()[1]);
                 });
             }
 
@@ -130,30 +122,24 @@ public abstract class ClientAdvancementsMixin implements ICustomAdvancementAppli
 
     @Unique
     private void applyOverrides() {
-        List<JsonObject> overrides = ConfigManager.loadOverrides();
-        if (overrides.isEmpty()) return;
+        for (JsonObject o : WaypointStorage.loadOverrides()) {
+            String idStr = ConfigIO.str(o, "id", "");
+            if (idStr.isEmpty()) continue;
+            AdvancementNode n = tree.get(ResourceLocation.parse(idStr));
+            if (n == null) continue;
 
-        for (JsonObject o : overrides) {
-            if (!o.has("id")) continue;
-            String idStr = o.get("id").getAsString();
-            ResourceLocation id = ResourceLocation.parse(idStr);
-            AdvancementNode node = this.tree.get(id);
-            if (node == null) continue;
-
-            node.holder().value().display().ifPresent(display -> {
-                if (o.has("title")) {
-                    ((DisplayInfoAccessor) display).pepe_setTitle(Component.literal(o.get("title").getAsString()));
-                }
-                if (o.has("description")) {
-                    ((DisplayInfoAccessor) display).pepe_setDescription(Component.literal(o.get("description").getAsString()));
-                }
-                if (o.has("icon")) {
-                    String iconStr = o.get("icon").getAsString();
+            n.holder().value().display().ifPresent(d -> {
+                String title = ConfigIO.nullable(o, "title");
+                if (title != null) ((DisplayInfoAccessor) d).advWp_setTitle(Component.literal(title));
+                String desc = ConfigIO.nullable(o, "description");
+                if (desc != null) ((DisplayInfoAccessor) d).advWp_setDescription(Component.literal(desc));
+                String icon = ConfigIO.nullable(o, "icon");
+                if (icon != null) {
                     try {
-                        var itemOpt = BuiltInRegistries.ITEM.get(ResourceLocation.parse(iconStr));
-                        itemOpt.ifPresent(item -> ((DisplayInfoAccessor) display).pepe_setIcon(new ItemStack(item)));
+                        var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(icon));
+                        item.ifPresent(i -> ((DisplayInfoAccessor) d).advWp_setIcon(new ItemStack(i)));
                     } catch (Exception e) {
-                        ((DisplayInfoAccessor) display).pepe_setIcon(new ItemStack(Items.PAPER));
+                        ((DisplayInfoAccessor) d).advWp_setIcon(new ItemStack(Items.PAPER));
                     }
                 }
             });
@@ -162,13 +148,10 @@ public abstract class ClientAdvancementsMixin implements ICustomAdvancementAppli
 
     @Unique
     private void refreshUI() {
-        if (this.listener != null) {
-            for (ResourceLocation id : advWp_injected) {
-                AdvancementNode node = this.tree.get(id);
-                if (node != null) {
-                    this.listener.onUpdateAdvancementProgress(node, this.progress.get(node.holder()));
-                }
-            }
+        if (listener == null) return;
+        for (ResourceLocation id : injected) {
+            AdvancementNode n = tree.get(id);
+            if (n != null) listener.onUpdateAdvancementProgress(n, progress.get(n.holder()));
         }
     }
 }

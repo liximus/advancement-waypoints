@@ -8,254 +8,196 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.phys.shapes.Shapes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class ItemPickerScreen extends Screen {
 
-    private static final ResourceLocation BACKGROUND =
-            ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
-    private static final ResourceLocation SLOTS =
-            ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/slots.png");
-    private static final ResourceLocation SCROLLER_SPRITE =
-            ResourceLocation.withDefaultNamespace("container/creative_inventory/scroller");
+    private static final ResourceLocation BG = ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
+    private static final ResourceLocation SLOTS = ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/slots.png");
+    private static final ResourceLocation SCROLLER = ResourceLocation.withDefaultNamespace("container/creative_inventory/scroller");
+    private static final int CELL = 18, SBW = 12, SBH = 15;
 
-    private static final int CELL_SIZE = 18;
-    private static final int SCROLLBAR_WIDTH = 12;
-    private static final int SCROLLER_HEIGHT = 15;
+    private static final Set<String> FUNCTIONAL_BLOCK_IDS = Set.of(
+            "crafting_table", "smithing_table", "cartography_table", "fletching_table",
+            "tnt", "note_block", "observer",
+            "piston", "sticky_piston",
+            "target", "redstone_lamp", "redstone_block"
+    );
 
-    private final IWaypointScreen parentScreen;
-    private final Consumer<Item> onItemSelected;
+    private final Screen parent;
+    private final Consumer<Item> callback;
+    private final boolean blocksOnly;
 
     private EditBox searchField;
-    private List<Item> allItems;
-    private List<Item> filteredItems;
-
+    private List<Item> allItems, filtered;
     private int scrollRow;
-    private float scrollProgress;
-    private boolean isDraggingScrollbar;
+    private float scrollProg;
+    private boolean dragging;
+    private int cols, panelX, panelY, panelW, panelH;
 
-    private int columns;
-    private int panelX, panelY, panelWidth, panelHeight;
+    public ItemPickerScreen(Screen parent, Consumer<Item> callback) {
+        this(parent, callback, false);
+    }
 
-    public ItemPickerScreen(IWaypointScreen parentScreen, Consumer<Item> onItemSelected) {
-        super(Component.literal("Выбор иконки"));
-        this.parentScreen = parentScreen;
-        this.onItemSelected = onItemSelected;
+    public ItemPickerScreen(Screen parent, Consumer<Item> callback, boolean blocksOnly) {
+        super(Component.literal(blocksOnly ? "Выбор фона" : "Выбор иконки"));
+        this.parent = parent;
+        this.callback = callback;
+        this.blocksOnly = blocksOnly;
     }
 
     @Override
     protected void init() {
         allItems = new ArrayList<>();
-        BuiltInRegistries.ITEM.forEach(allItems::add);
-        allItems.remove(Items.AIR);
-
-        panelWidth = Math.min(width - 20, 360);
-        panelHeight = Math.min(height - 20, 280);
-        panelX = (width - panelWidth) / 2;
-        panelY = (height - panelHeight) / 2;
-
-        columns = Math.max(1, (panelWidth - 20 - SCROLLBAR_WIDTH) / CELL_SIZE);
-
-        int searchWidth = Math.min(panelWidth - 20, 200);
-        searchField = addRenderableWidget(
-                new EditBox(font, panelX + (panelWidth - searchWidth) / 2, panelY + 18, searchWidth, 16, Component.literal("")));
-        searchField.setHint(Component.literal("Поиск предмета"));
-        searchField.setResponder(text -> {
-            applyFilter();
-            scrollRow = 0;
-            scrollProgress = 0.0F;
+        BuiltInRegistries.ITEM.forEach(item -> {
+            if (item == Items.AIR) return;
+            if (blocksOnly) {
+                if (!(item instanceof BlockItem blockItem)) return;
+                Block block = blockItem.getBlock();
+                if (!isFullBlock(block)) return;
+                if (isFunctionalBlock(block)) return;
+            }
+            allItems.add(item);
         });
-        setInitialFocus(searchField);
 
-        applyFilter();
+        panelW = Math.min(width - 20, 360);
+        panelH = Math.min(height - 20, 280);
+        panelX = (width - panelW) / 2;
+        panelY = (height - panelH) / 2;
+        cols = Math.max(1, (panelW - 20 - SBW) / CELL);
+
+        int sw = Math.min(panelW - 20, 200);
+        searchField = addRenderableWidget(new EditBox(font, panelX + (panelW - sw) / 2, panelY + 18, sw, 16, Component.literal("")));
+        searchField.setHint(Component.literal(blocksOnly ? "Поиск фона" : "Поиск предмета"));
+        searchField.setResponder(t -> { filter(); scrollRow = 0; scrollProg = 0; });
+        setInitialFocus(searchField);
+        filter();
         scrollRow = 0;
-        scrollProgress = 0.0F;
-        isDraggingScrollbar = false;
+        scrollProg = 0;
     }
 
-    private void applyFilter() {
-        String query = searchField.getValue().toLowerCase();
-        if (query.isEmpty()) {
-            filteredItems = new ArrayList<>(allItems);
-            return;
-        }
-        filteredItems = new ArrayList<>();
-        for (Item item : allItems) {
-            ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
-            String displayName = new ItemStack(item).getHoverName().getString().toLowerCase();
-            if ((id != null && id.toString().contains(query)) || displayName.contains(query)) {
-                filteredItems.add(item);
+    private boolean isFullBlock(Block block) {
+        try {
+            return block.defaultBlockState().isCollisionShapeFullBlock(null, null);
+        } catch (Exception e) {
+            try {
+                var shape = block.defaultBlockState().getShape(null, null);
+                return shape == Shapes.block();
+            } catch (Exception e2) {
+                return true;
             }
         }
     }
 
-    private int getMaxScrollRow() {
-        return Math.max(0, (filteredItems.size() + columns - 1) / columns - getVisibleRows());
+    private boolean isFunctionalBlock(Block block) {
+        if (block instanceof EntityBlock) return true;
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        return FUNCTIONAL_BLOCK_IDS.contains(id.getPath());
     }
 
-    private void syncScrollProgressFromRow() {
-        int max = getMaxScrollRow();
-        scrollProgress = max > 0 ? (float) scrollRow / max : 0.0F;
+    private void filter() {
+        String q = searchField.getValue().toLowerCase();
+        if (q.isEmpty()) { filtered = new ArrayList<>(allItems); return; }
+        filtered = new ArrayList<>();
+        for (Item item : allItems) {
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+            String name = new ItemStack(item).getHoverName().getString().toLowerCase();
+            if ((id != null && id.toString().contains(q)) || name.contains(q)) filtered.add(item);
+        }
     }
 
-    private void syncScrollRowFromProgress() {
-        int max = getMaxScrollRow();
-        scrollRow = Math.round(scrollProgress * max);
-        scrollRow = Math.max(0, Math.min(scrollRow, max));
-    }
-
-    private int getGridTop() {
-        return panelY + 40;
-    }
-
-    private int getGridLeft() {
-        return panelX + (panelWidth - columns * CELL_SIZE - SCROLLBAR_WIDTH - 4) / 2;
-    }
-
-    private int getVisibleRows() {
-        return Math.max(1, (panelY + panelHeight - 8 - getGridTop()) / CELL_SIZE);
-    }
-
-    private int getScrollbarX() {
-        return getGridLeft() + columns * CELL_SIZE + 4;
-    }
-
-    private int getScrollbarTop() {
-        return getGridTop();
-    }
-
-    private int getScrollbarHeight() {
-        return getVisibleRows() * CELL_SIZE;
-    }
-
-    private boolean canScroll() {
-        return getMaxScrollRow() > 0;
-    }
+    private int maxRow() { return Math.max(0, (filtered.size() + cols - 1) / cols - visRows()); }
+    private int visRows() { return Math.max(1, (panelY + panelH - 8 - gridTop()) / CELL); }
+    private int gridTop() { return panelY + 40; }
+    private int gridLeft() { return panelX + (panelW - cols * CELL - SBW - 4) / 2; }
+    private int sbX() { return gridLeft() + cols * CELL + 4; }
+    private int sbH() { return visRows() * CELL; }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND,
-                panelX, panelY, 0.0F, 0.0F, panelWidth, panelHeight, panelWidth, panelHeight);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, SLOTS,
-                getGridLeft(), getGridTop(), 0.0F, 0.0F,
-                columns * CELL_SIZE, getVisibleRows() * CELL_SIZE, 90, 54);
+    public void render(GuiGraphics g, int mx, int my, float d) {
+        g.blit(RenderPipelines.GUI_TEXTURED, BG, panelX, panelY, 0f, 0f, panelW, panelH, panelW, panelH);
+        g.blit(RenderPipelines.GUI_TEXTURED, SLOTS, gridLeft(), gridTop(), 0f, 0f, cols * CELL, visRows() * CELL, 90, 54);
+        g.drawString(font, title, width / 2 - font.width(title) / 2, panelY + 8, 0xFF222222, false);
+        super.render(g, mx, my, d);
 
-        graphics.drawString(font, title, width / 2 - font.width(title) / 2, panelY + 8, 0xFF222222, false);
-
-        super.render(graphics, mouseX, mouseY, delta);
-
-        int gridTop = getGridTop();
-        int gridLeft = getGridLeft();
-        int visibleRows = getVisibleRows();
-        Item hoveredItem = null;
-
-        for (int row = 0; row < visibleRows; row++) {
-            for (int col = 0; col < columns; col++) {
-                int index = (scrollRow + row) * columns + col;
-                if (index >= filteredItems.size()) break;
-
-                int x = gridLeft + col * CELL_SIZE;
-                int y = gridTop + row * CELL_SIZE;
-                Item item = filteredItems.get(index);
-
-                graphics.renderItem(new ItemStack(item), x + 1, y + 1);
-
-                if (mouseX >= x && mouseX < x + CELL_SIZE && mouseY >= y && mouseY < y + CELL_SIZE) {
-                    graphics.fill(x, y, x + CELL_SIZE, y + CELL_SIZE, 0x50FFFFFF);
-                    hoveredItem = item;
+        Item hovered = null;
+        for (int r = 0; r < visRows(); r++) {
+            for (int c = 0; c < cols; c++) {
+                int idx = (scrollRow + r) * cols + c;
+                if (idx >= filtered.size()) break;
+                int x = gridLeft() + c * CELL, y = gridTop() + r * CELL;
+                Item item = filtered.get(idx);
+                g.renderItem(new ItemStack(item), x + 1, y + 1);
+                if (mx >= x && mx < x + CELL && my >= y && my < y + CELL) {
+                    g.fill(x, y, x + CELL, y + CELL, 0x50FFFFFF);
+                    hovered = item;
                 }
             }
         }
 
-        int sbX = getScrollbarX();
-        int sbY = getScrollbarTop();
-        int sbH = getScrollbarHeight();
-        int scrollerY = sbY + (int) ((sbH - SCROLLER_HEIGHT) * scrollProgress);
+        int sy = gridTop() + (int)((sbH() - SBH) * scrollProg);
+        g.fill(sbX(), gridTop(), sbX() + SBW, gridTop() + sbH(), 0x80000000);
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER, sbX(), sy, SBW, SBH);
 
-        graphics.fill(sbX, sbY, sbX + SCROLLBAR_WIDTH, sbY + sbH, 0x80000000);
-        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_SPRITE,
-                sbX, scrollerY, SCROLLBAR_WIDTH, SCROLLER_HEIGHT);
-
-        if (hoveredItem != null) {
-            String name = new ItemStack(hoveredItem).getHoverName().getString();
-            int tooltipX = mouseX + 12;
-            int tooltipY = mouseY - 4;
-            int textWidth = font.width(name);
-            graphics.fill(tooltipX - 3, tooltipY - 3, tooltipX + textWidth + 3, tooltipY + 12, 0xF0100010);
-            graphics.fill(tooltipX - 2, tooltipY - 2, tooltipX + textWidth + 2, tooltipY + 11, 0xF0281050);
-            graphics.drawString(font, name, tooltipX, tooltipY, 0xFFFFFFFF, true);
+        if (hovered != null) {
+            String n = new ItemStack(hovered).getHoverName().getString();
+            int tx = mx + 12, ty = my - 4, tw = font.width(n);
+            g.fill(tx - 3, ty - 3, tx + tw + 3, ty + 12, 0xF0100010);
+            g.fill(tx - 2, ty - 2, tx + tw + 2, ty + 11, 0xF0281050);
+            g.drawString(font, n, tx, ty, 0xFFFFFFFF, true);
         }
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        int gridTop = getGridTop();
-        int gridLeft = getGridLeft();
-        int visibleRows = getVisibleRows();
-
-        int sbX = getScrollbarX();
-        int sbY = getScrollbarTop();
-        int sbH = getScrollbarHeight();
-
-        if (canScroll() && mouseX >= sbX && mouseX < sbX + SCROLLBAR_WIDTH
-                && mouseY >= sbY && mouseY < sbY + sbH) {
-            isDraggingScrollbar = true;
-            float relative = (float) (mouseY - sbY - SCROLLER_HEIGHT / 2.0) / (sbH - SCROLLER_HEIGHT);
-            scrollProgress = Math.max(0.0F, Math.min(1.0F, relative));
-            syncScrollRowFromProgress();
+    public boolean mouseClicked(double mx, double my, int b) {
+        if (maxRow() > 0 && mx >= sbX() && mx < sbX() + SBW && my >= gridTop() && my < gridTop() + sbH()) {
+            dragging = true;
+            scrollProg = Math.max(0, Math.min(1, (float)(my - gridTop() - SBH / 2.0) / (sbH() - SBH)));
+            scrollRow = Math.round(scrollProg * maxRow());
             return true;
         }
-
-        if (mouseX >= gridLeft && mouseX < gridLeft + columns * CELL_SIZE
-                && mouseY >= gridTop && mouseY < gridTop + visibleRows * CELL_SIZE) {
-            int col = (int) (mouseX - gridLeft) / CELL_SIZE;
-            int row = (int) (mouseY - gridTop) / CELL_SIZE;
-            int index = (scrollRow + row) * columns + col;
-
-            if (index >= 0 && index < filteredItems.size()) {
-                onItemSelected.accept(filteredItems.get(index));
-                parentScreen.closeItemPicker();
+        if (mx >= gridLeft() && mx < gridLeft() + cols * CELL && my >= gridTop() && my < gridTop() + visRows() * CELL) {
+            int idx = (scrollRow + (int)(my - gridTop()) / CELL) * cols + (int)(mx - gridLeft()) / CELL;
+            if (idx >= 0 && idx < filtered.size()) {
+                callback.accept(filtered.get(idx));
+                minecraft.setScreen(parent);
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(mx, my, b);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (isDraggingScrollbar && canScroll()) {
-            int sbY = getScrollbarTop();
-            int sbH = getScrollbarHeight();
-            float relative = (float) (mouseY - sbY - SCROLLER_HEIGHT / 2.0) / (sbH - SCROLLER_HEIGHT);
-            scrollProgress = Math.max(0.0F, Math.min(1.0F, relative));
-            syncScrollRowFromProgress();
+    public boolean mouseDragged(double mx, double my, int b, double dx, double dy) {
+        if (dragging && maxRow() > 0) {
+            scrollProg = Math.max(0, Math.min(1, (float)(my - gridTop() - SBH / 2.0) / (sbH() - SBH)));
+            scrollRow = Math.round(scrollProg * maxRow());
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return super.mouseDragged(mx, my, b, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        isDraggingScrollbar = false;
-        return super.mouseReleased(mouseX, mouseY, button);
-    }
+    public boolean mouseReleased(double mx, double my, int b) { dragging = false; return super.mouseReleased(mx, my, b); }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
-        int max = getMaxScrollRow();
-        scrollRow = Math.max(0, Math.min(scrollRow - (int) deltaY, max));
-        syncScrollProgressFromRow();
+    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        scrollRow = Math.max(0, Math.min(scrollRow - (int)sy, maxRow()));
+        scrollProg = maxRow() > 0 ? (float)scrollRow / maxRow() : 0;
         return true;
     }
 
     @Override
-    public void onClose() {
-        parentScreen.closeItemPicker();
-    }
+    public void onClose() { minecraft.setScreen(parent); }
 }

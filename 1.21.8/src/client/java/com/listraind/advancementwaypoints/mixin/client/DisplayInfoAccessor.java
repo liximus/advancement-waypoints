@@ -9,15 +9,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(DisplayInfo.class)
 public interface DisplayInfoAccessor {
-    @Mutable
-    @Accessor("description")
-    void pepe_setDescription(Component description);
-
-    @Mutable
-    @Accessor("title")
-    void pepe_setTitle(Component title);
-
-    @Mutable
-    @Accessor("icon")
-    void pepe_setIcon(ItemStack icon);
+    @Mutable @Accessor("description") void advWp_setDescription(Component d);
+    @Mutable @Accessor("title") void advWp_setTitle(Component t);
+    @Mutable @Accessor("icon") void advWp_setIcon(ItemStack i);
 }

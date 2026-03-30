@@ -3,7 +3,8 @@
     "allow": [
       "Bash(gradlew *)",
       "Bash(git checkout *)",
-      "Bash(gradlew.bat *)"
+      "Bash(gradlew.bat *)",
+      "Bash(mkdir *)"
     ]
   },
   "$version": 3

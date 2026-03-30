@@ -1,83 +1,90 @@
 package com.listraind.advancementwaypoints.gui;
 
 import com.google.gson.JsonObject;
-import com.listraind.advancementwaypoints.AdvancementWaypoints;
-import com.listraind.advancementwaypoints.config.WaypointManager;
-import com.listraind.advancementwaypoints.config.WaypointManager.CoordsPerDimension;
+import com.listraind.advancementwaypoints.advancement.CoordParser;
+import com.listraind.advancementwaypoints.config.ConfigIO;
+import com.listraind.advancementwaypoints.config.WaypointStorage;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
 
 import java.util.List;
 
-public class EditWaypointScreen extends BaseWaypointFormScreen {
+public class EditWaypointScreen extends WaypointFormScreen {
 
     private final String originalId;
-    private List<WaypointManager.CoordsPerDimension> allOriginalCoords;
 
-    public EditWaypointScreen(JsonObject waypointJson) {
+    public EditWaypointScreen(JsonObject data) {
         super(Component.literal("Редактирование вейпоинта"));
-        this.originalId = waypointJson.has("id") ? waypointJson.get("id").getAsString() : "";
-        this.isVanilla = !this.originalId.contains("advwaypoints");
-        loadFromJson(waypointJson);
-    }
+        this.originalId = ConfigIO.str(data, "id", "");
+        this.isVanilla = !originalId.contains("advwaypoints");
 
-    private void loadFromJson(JsonObject o) {
-        savedName = o.has("title") ? o.get("title").getAsString() : "";
-        savedName = savedName.replace('§', '&');
-        selectedIcon = WaypointManager.getIconFromJson(o);
-        selectedParentId = WaypointManager.getParentFromJson(o);
+        savedName = ConfigIO.str(data, "title", "").replace('§', '&');
+        savedBackground = ConfigIO.nullable(data, "background");
+        if (savedBackground == null) savedBackground = "";
 
-        String desc = o.has("description") ? o.get("description").getAsString() : "";
-        parseDescription(desc);
-    }
+        String iconStr = ConfigIO.str(data, "icon", "minecraft:grass_block");
+        try { selectedIcon = BuiltInRegistries.ITEM.getValue(ResourceLocation.parse(iconStr)); }
+        catch (Exception e) { selectedIcon = Items.GRASS_BLOCK; }
 
-    private void parseDescription(String desc) {
-        allOriginalCoords = WaypointManager.parseAllCoordsFromDescription(desc);
+        String parentStr = ConfigIO.nullable(data, "parent");
+        if (parentStr != null && !parentStr.isEmpty()) {
+            selectedParentId = ResourceLocation.parse(parentStr);
+            hadParentBefore = true;
+        }
 
-        String[][] parsed = WaypointManager.parseCoordsFromDescription(desc);
-        activeCoords.clear();
-        for (int i = 0; i < 4; i++) {
-            if (parsed[i] != null && parsed[i].length >= 3 && (!parsed[i][0].isEmpty() || !parsed[i][1].isEmpty() || !parsed[i][2].isEmpty())) {
-                activeCoords.add(new CoordData(i, parsed[i][0], parsed[i][1], parsed[i][2]));
+        String desc = ConfigIO.str(data, "description", "");
+        List<CoordParser.DimCoords> parsed = CoordParser.parseAllCoords(desc);
+        for (CoordParser.DimCoords dc : parsed) {
+            for (String[] c : dc.coords()) {
+                coordRows.add(new CoordRow(dc.dim(), c[0], c[1], c[2]));
             }
         }
-        
-        for (CoordsPerDimension cpd : allOriginalCoords) {
-            for (int j = 1; j < cpd.coords.size(); j++) {
-                String[] c = cpd.coords.get(j);
-                activeCoords.add(new CoordData(cpd.dimIndex, c[0], c[1], c[2]));
-            }
-        }
-        
-        savedDescription = WaypointManager.parseExtraFromDescription(desc);
+        savedDesc = CoordParser.extractExtra(desc);
     }
 
     @Override
-    protected void initActionButtons(int centerX, int buttonsY) {
-        addRenderableWidget(Button.builder(Component.literal("§aСохранить"), button -> {
-            saveWaypoint();
-            minecraft.setScreen(null);
-        }).bounds(centerX - 105, buttonsY, 100, BUTTON_HEIGHT).build());
-
-        Button delBtn = addRenderableWidget(Button.builder(Component.literal("§cУдалить"), button -> {
-            deleteWaypoint();
-            minecraft.setScreen(null);
-        }).bounds(centerX + 5, buttonsY, 100, BUTTON_HEIGHT).build());
-        delBtn.active = !isVanilla;
+    protected void init() {
+        super.init();
+        if (isVanilla) {
+            nameField.active = false;
+            descField.active = false;
+            iconButton.active = false;
+            parentButton.active = false;
+            if (bgButton != null) bgButton.active = false;
+        }
     }
 
-    private void saveWaypoint() {
-        String name = nameField.getValue().trim();
-        if (name.isEmpty()) name = "waypoint";
-        name = translateColorCodes(name);
+    @Override
+    protected void initActions(int cx, int y) {
+        if (isVanilla) {
+            addRenderableWidget(Button.builder(Component.literal("§7Только просмотр"), b -> {}).bounds(cx - 105, y, 210, BH).build());
+            return;
+        }
 
-        String description = WaypointManager.buildDescription(getStandardCoordFields(), savedDescription, allOriginalCoords);
-        String iconId = getIconId();
+        addRenderableWidget(Button.builder(Component.literal("§aСохранить"), b -> {
+            String name = colorCodes(nameField.getValue().trim());
+            if (name.isEmpty()) name = "waypoint";
+            String bg = getBackgroundValue();
 
-        WaypointManager.saveWaypoint(originalId, name, description, iconId, selectedParentId);
-    }
+            JsonObject entry = new JsonObject();
+            entry.addProperty("id", originalId);
+            entry.addProperty("icon", iconId());
+            entry.addProperty("title", name);
+            entry.addProperty("description", buildFinalDescription());
+            entry.addProperty("frame", "task");
+            entry.addProperty("parent", selectedParentId != null ? selectedParentId.toString() : "");
+            if (bg != null) entry.addProperty("background", bg);
 
-    private void deleteWaypoint() {
-        WaypointManager.deleteWaypoint(originalId);
+            WaypointStorage.saveOrUpdateWaypoint(entry);
+            minecraft.setScreen(null);
+        }).bounds(cx - 105, y, 100, BH).build());
+
+        addRenderableWidget(Button.builder(Component.literal("§cУдалить"), b -> {
+            WaypointStorage.deleteWaypoint(originalId);
+            minecraft.setScreen(null);
+        }).bounds(cx + 5, y, 100, BH).build());
     }
 }

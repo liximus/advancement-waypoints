@@ -10,13 +10,7 @@ import java.util.Map;
 
 @Mixin(AdvancementTab.class)
 public interface AdvancementTabAccessor {
-
-    @Accessor
-    Map<AdvancementNode, AdvancementWidget> getWidgets();
-
-    @Accessor
-    double getScrollX();
-
-    @Accessor
-    double getScrollY();
+    @Accessor Map<AdvancementNode, AdvancementWidget> getWidgets();
+    @Accessor double getScrollX();
+    @Accessor double getScrollY();
 }

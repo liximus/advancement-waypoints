@@ -1,9 +1,8 @@
 package com.listraind.advancementwaypoints.mixin.client;
 
-
-import com.listraind.advancementwaypoints.AdvancementWaypoints;
-import com.listraind.advancementwaypoints.advancementMixinHelpers.IAdvancementScreenCustom;
-import com.listraind.advancementwaypoints.navigator.ArrowModule;
+import com.listraind.advancementwaypoints.advancement.CoordParser;
+import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
+import com.listraind.advancementwaypoints.navigator.Navigator;
 import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -25,129 +24,76 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static com.listraind.advancementwaypoints.config.AdvancementParser.parseAdvancement;
 
 @Mixin(AdvancementsScreen.class)
 public abstract class AdvancementsScreenMixin extends Screen implements IAdvancementScreenCustom {
 
     @Shadow private AdvancementTab selectedTab;
+    @Final @Shadow private Screen lastScreen;
 
-    // Сохраняем реальные координаты окна из последнего рендера
-    @Unique private int lastWindowX;
-    @Unique private int lastWindowY;
-
-    @Unique private boolean isSelectMode;
-
-    @Final
-    @Shadow private Screen lastScreen;
-
-    @Unique private Consumer<ResourceLocation> idToSelect;
-    
+    @Unique private int lastWinX, lastWinY;
+    @Unique private boolean selectMode;
+    @Unique private Consumer<ResourceLocation> selectCallback;
     @Unique private Screen screenToOpen;
 
-
-
-    protected AdvancementsScreenMixin(ClientAdvancements clientAdvancements, Component title) {
-        super(title);
-    }
+    protected AdvancementsScreenMixin(Component t) { super(t); }
 
     @Inject(method = "renderWindow", at = @At("HEAD"))
-    private void captureWindowPosition(GuiGraphics guiGraphics, int x, int y,
-                                       CallbackInfo ci) {
-        this.lastWindowX = x;
-        this.lastWindowY = y;
+    private void capturePos(GuiGraphics g, int x, int y, CallbackInfo ci) {
+        lastWinX = x;
+        lastWinY = y;
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"))
-    private void onAdvancementClicked(double mouseX, double mouseY, int button,
-                                      CallbackInfoReturnable<Boolean> cir) {
-        if (button != 0 || this.selectedTab == null) return;
+    private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
+        if (btn != 0 || selectedTab == null) return;
 
-        AdvancementTabAccessor tab = (AdvancementTabAccessor) this.selectedTab;
+        AdvancementTabAccessor tab = (AdvancementTabAccessor) selectedTab;
+        int relX = (int) mx - (lastWinX + 9);
+        int relY = (int) my - (lastWinY + 18);
+        int sx = Mth.floor(tab.getScrollX());
+        int sy = Mth.floor(tab.getScrollY());
 
-        int contentLeft = this.lastWindowX + 9;
-        int contentTop = this.lastWindowY + 18;
+        for (AdvancementWidget w : tab.getWidgets().values()) {
+            AdvancementWidgetAccessor wa = (AdvancementWidgetAccessor) w;
+            if (!wa.invokeIsMouseOver(sx, sy, relX, relY)) continue;
 
-        int relMouseX = (int) mouseX - contentLeft;
-        int relMouseY = (int) mouseY - contentTop;
-
-        int scrollX = Mth.floor(tab.getScrollX());
-        int scrollY = Mth.floor(tab.getScrollY());
-
-        for (AdvancementWidget widget : tab.getWidgets().values()) {
-            AdvancementWidgetAccessor wa = (AdvancementWidgetAccessor) widget;
-
-
-
-            if (wa.invokeIsMouseOver(scrollX, scrollY, relMouseX, relMouseY)) {
-                AdvancementNode node = wa.getAdvancementNode();
-
-                node.holder().value().display().ifPresent(display -> {
-                    Component description = display.getDescription();
-                    Component title = display.getTitle();
-                    ResourceLocation id = node.holder().id();
-                    if(!isSelectMode) {
-                        AdvancementWaypoints.LOGGER.info(description.getString());
-                        startNavigator(description.getString());
-                        Minecraft.getInstance().setScreen(null);
-                    }else{
-                        this.idToSelect.accept(id);
-                        assert this.minecraft != null;
-                        if (this.screenToOpen != null) {
-                            this.minecraft.setScreen(this.screenToOpen);
-                        } else {
-                            this.minecraft.setScreen(this.lastScreen);
-                        }
-                    }
-                });
-
-                break;
-            }
+            AdvancementNode node = wa.getAdvancementNode();
+            node.holder().value().display().ifPresent(d -> {
+                ResourceLocation id = node.holder().id();
+                if (selectMode) {
+                    selectCallback.accept(id);
+                    minecraft.setScreen(screenToOpen != null ? screenToOpen : lastScreen);
+                } else {
+                    Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
+                    Navigator nav = Navigator.getInstance();
+                    nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
+                    nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
+                    nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
+                    Minecraft.getInstance().setScreen(null);
+                }
+            });
+            break;
         }
     }
 
-
-
-
-
-
-    @Unique
-    private static void startNavigator(String text) {
-        Map<ArrowModule.Dimension, List<BlockPos>> targets = parseAdvancement(text);
-
-        ArrowModule arrow = ArrowModule.getInstance();
-        arrow.setTargets(ArrowModule.Dimension.OVERWORLD, targets.get(ArrowModule.Dimension.OVERWORLD));
-        arrow.setTargets(ArrowModule.Dimension.NETHER,    targets.get(ArrowModule.Dimension.NETHER));
-        arrow.setTargets(ArrowModule.Dimension.END,        targets.get(ArrowModule.Dimension.END));
-    }
-
-
-    @Unique
     @Override
-    public void advWaypoint_setSelectModeStringToWrite(Consumer<ResourceLocation> idToSelect) {
-        isSelectMode = true;
-        this.idToSelect = idToSelect;
+    public void advWaypoint_setSelectMode(Consumer<ResourceLocation> cb) {
+        selectMode = true;
+        selectCallback = cb;
     }
 
-    @Unique
     @Override
-    public void advWaypoint_setScreenToOpen(Screen screen) {
-        this.screenToOpen = screen;
+    public void advWaypoint_setScreenToOpen(Screen s) {
+        screenToOpen = s;
     }
-
 
     @Override
     public void onClose() {
-        isSelectMode = false;
-        assert this.minecraft != null;
-        this.minecraft.setScreen(this.lastScreen);
+        selectMode = false;
+        minecraft.setScreen(lastScreen);
     }
-
-
-
 }
