@@ -2,6 +2,7 @@ package com.listraind.advancementwaypoints.config;
 
 import com.google.gson.JsonObject;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.storage.LevelResource;
 
 import java.nio.charset.StandardCharsets;
@@ -11,6 +12,8 @@ import java.util.List;
 
 public class ConfigManager {
     private static final Path BASE = Path.of("config", "advancement_waypoints");
+
+    private static ResourceLocation lastParent = null;
 
     private static Path worldDir() {
         return BASE.resolve("worlds").resolve(getWorldHash());
@@ -30,6 +33,14 @@ public class ConfigManager {
 
     public static void saveOverrides(List<JsonObject> list) {
         jsonFileHelper.writeArray(worldDir().resolve("overrides.json"), list);
+    }
+
+    public static ResourceLocation getLastParent() {
+        return lastParent;
+    }
+
+    public static void setLastParent(ResourceLocation parentId) {
+        lastParent = parentId;
     }
 
     private static String getWorldHash() {

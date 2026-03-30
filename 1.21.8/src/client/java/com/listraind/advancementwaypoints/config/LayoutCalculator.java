@@ -20,6 +20,10 @@ public class LayoutCalculator {
         return computedPositions;
     }
 
+    public Map<String, float[]> getVanillaOverrides() {
+        return new LinkedHashMap<>();
+    }
+
     public void calculate(List<JsonObject> customAdvancements, AdvancementTree tree) {
         computedPositions.clear();
         allOccupied.clear();

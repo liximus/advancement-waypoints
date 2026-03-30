@@ -29,7 +29,7 @@ public class ItemPickerScreen extends Screen {
     private static final int SCROLLBAR_WIDTH = 12;
     private static final int SCROLLER_HEIGHT = 15;
 
-    private final WaypointScreen parentScreen;
+    private final IWaypointScreen parentScreen;
     private final Consumer<Item> onItemSelected;
 
     private EditBox searchField;
@@ -43,7 +43,7 @@ public class ItemPickerScreen extends Screen {
     private int columns;
     private int panelX, panelY, panelWidth, panelHeight;
 
-    public ItemPickerScreen(WaypointScreen parentScreen, Consumer<Item> onItemSelected) {
+    public ItemPickerScreen(IWaypointScreen parentScreen, Consumer<Item> onItemSelected) {
         super(Component.literal("Выбор иконки"));
         this.parentScreen = parentScreen;
         this.onItemSelected = onItemSelected;
@@ -220,7 +220,7 @@ public class ItemPickerScreen extends Screen {
 
             if (index >= 0 && index < filteredItems.size()) {
                 onItemSelected.accept(filteredItems.get(index));
-                minecraft.setScreen(parentScreen);
+                parentScreen.closeItemPicker();
                 return true;
             }
         }
@@ -256,9 +256,6 @@ public class ItemPickerScreen extends Screen {
 
     @Override
     public void onClose() {
-        assert minecraft != null;
-        minecraft.setScreen(parentScreen);
+        parentScreen.closeItemPicker();
     }
-
-
 }

@@ -2,7 +2,6 @@ package com.listraind.advancementwaypoints.config;
 
 import com.listraind.advancementwaypoints.navigator.ArrowModule;
 import net.minecraft.core.BlockPos;
-import org.spongepowered.asm.mixin.Unique;
 
 import java.util.*;
 import java.util.regex.Matcher;

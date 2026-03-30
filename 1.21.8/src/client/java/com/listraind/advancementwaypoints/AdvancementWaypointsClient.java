@@ -1,6 +1,7 @@
 package com.listraind.advancementwaypoints;
 
-import com.listraind.advancementwaypoints.gui.WaypointScreen;
+import com.listraind.advancementwaypoints.gui.AddWaypointScreen;
+import com.listraind.advancementwaypoints.gui.BaseWaypointScreen;
 import com.listraind.advancementwaypoints.navigator.ArrowModule;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
@@ -27,7 +28,7 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openWaypointKey.consumeClick()) {
-				client.setScreen(new WaypointScreen());
+				client.setScreen(new BaseWaypointScreen());
 			}
 		});
 	}

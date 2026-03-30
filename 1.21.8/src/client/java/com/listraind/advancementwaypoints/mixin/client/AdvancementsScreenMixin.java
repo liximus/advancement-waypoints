@@ -47,6 +47,8 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
     @Shadow private Screen lastScreen;
 
     @Unique private Consumer<ResourceLocation> idToSelect;
+    
+    @Unique private Screen screenToOpen;
 
 
 
@@ -96,7 +98,11 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
                     }else{
                         this.idToSelect.accept(id);
                         assert this.minecraft != null;
-                        this.minecraft.setScreen(this.lastScreen);
+                        if (this.screenToOpen != null) {
+                            this.minecraft.setScreen(this.screenToOpen);
+                        } else {
+                            this.minecraft.setScreen(this.lastScreen);
+                        }
                     }
                 });
 
@@ -126,6 +132,12 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
     public void advWaypoint_setSelectModeStringToWrite(Consumer<ResourceLocation> idToSelect) {
         isSelectMode = true;
         this.idToSelect = idToSelect;
+    }
+
+    @Unique
+    @Override
+    public void advWaypoint_setScreenToOpen(Screen screen) {
+        this.screenToOpen = screen;
     }
 
 
