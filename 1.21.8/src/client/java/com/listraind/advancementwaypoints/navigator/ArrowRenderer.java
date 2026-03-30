@@ -48,7 +48,7 @@ public class ArrowRenderer {
         ArrowModule.Dimension currentDim = ArrowModule.Dimension.from(player.level().dimension());
         if (currentDim == null) return;
 
-        BlockPos target = module.getTarget(currentDim);
+        BlockPos target = module.getNearestTarget(currentDim, player.blockPosition());
 
         int screenW = mc.getWindow().getGuiScaledWidth();
         int screenH = mc.getWindow().getGuiScaledHeight();

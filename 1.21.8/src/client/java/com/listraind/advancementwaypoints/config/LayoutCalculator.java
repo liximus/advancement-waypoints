@@ -14,6 +14,7 @@ public class LayoutCalculator {
     private static final float MIN_DIST_Y = 0.9f;
 
     private final Map<String, float[]> computedPositions = new LinkedHashMap<>();
+    private final Map<String, float[]> vanillaOverrides = new LinkedHashMap<>();
     private final List<float[]> allOccupied = new ArrayList<>();
 
     public Map<String, float[]> getComputedPositions() {
@@ -21,14 +22,28 @@ public class LayoutCalculator {
     }
 
     public Map<String, float[]> getVanillaOverrides() {
-        return new LinkedHashMap<>();
+        return vanillaOverrides;
+    }
+
+    private void loadOverridePositions() {
+        List<JsonObject> overrides = ConfigManager.loadOverrides();
+        for (JsonObject o : overrides) {
+            if (!o.has("id") || !o.has("x") || !o.has("y")) continue;
+            String id = o.get("id").getAsString();
+            float x = o.get("x").getAsFloat();
+            float y = o.get("y").getAsFloat();
+            vanillaOverrides.put(id, new float[]{x, y});
+        }
     }
 
     public void calculate(List<JsonObject> customAdvancements, AdvancementTree tree) {
         computedPositions.clear();
+        vanillaOverrides.clear();
         allOccupied.clear();
 
         if (customAdvancements.isEmpty()) return;
+
+        loadOverridePositions();
 
         Map<String, JsonObject> byId = new LinkedHashMap<>();
         for (JsonObject obj : customAdvancements) {
@@ -253,6 +268,7 @@ public class LayoutCalculator {
     private float[] resolvePosition(String id, AdvancementTree tree, Map<String, float[]> knownPositions) {
         if (computedPositions.containsKey(id)) return computedPositions.get(id);
         if (knownPositions.containsKey(id)) return knownPositions.get(id);
+        if (vanillaOverrides.containsKey(id)) return vanillaOverrides.get(id);
 
         try {
             AdvancementNode node = tree.get(ResourceLocation.parse(id));
@@ -278,7 +294,12 @@ public class LayoutCalculator {
     }
 
     private void collectRecursive(AdvancementNode node, Map<String, float[]> positions) {
-        node.holder().value().display().ifPresent(d -> positions.put(node.holder().id().toString(), new float[]{d.getX(), d.getY()}));
+        String id = node.holder().id().toString();
+        if (vanillaOverrides.containsKey(id)) {
+            positions.put(id, vanillaOverrides.get(id));
+        } else {
+            node.holder().value().display().ifPresent(d -> positions.put(id, new float[]{d.getX(), d.getY()}));
+        }
         for (AdvancementNode child : node.children()) {
             collectRecursive(child, positions);
         }

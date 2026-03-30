@@ -37,7 +37,7 @@ public abstract class BaseWaypointFormScreen extends Screen implements IWaypoint
     protected static final int GAP = 4;
     protected static final int FILL_BUTTON_WIDTH = 60;
 
-    public static final String[] DIMENSION_LABELS = {"Верхний мир", "Крыша ада", "Ад", "Энд"};
+    public static final String[] DIMENSION_LABELS = {"§2Верхний мир", "§4Крыша ада", "§cАд", "§5Энд"};
     protected static final String[] DIMENSION_KEYS = {
             "minecraft:overworld", "minecraft:the_nether", "minecraft:the_nether", "minecraft:the_end"
     };
@@ -272,7 +272,7 @@ public abstract class BaseWaypointFormScreen extends Screen implements IWaypoint
             CoordData cd = activeCoords.get(i);
             if (cd.bx != null) {
                 int labelY = cd.bx.getY() - 11;
-                graphics.drawString(font, DIMENSION_LABELS[cd.dim], rowLeft, labelY, LABEL_COLOR, false);
+                graphics.drawString(font, DIMENSION_LABELS[cd.dim], rowLeft, labelY, 0xFFFFFFFF, false);
             }
         }
 
@@ -384,9 +384,22 @@ public abstract class BaseWaypointFormScreen extends Screen implements IWaypoint
         }
         for (CoordData cd : activeCoords) {
             if (cd.dim >= 0 && cd.dim < 4) {
-                standard[cd.dim][0].setValue(cd.bx != null ? cd.bx.getValue() : cd.sx);
-                standard[cd.dim][1].setValue(cd.by != null ? cd.by.getValue() : cd.sy);
-                standard[cd.dim][2].setValue(cd.bz != null ? cd.bz.getValue() : cd.sz);
+                String xVal = cd.bx != null ? cd.bx.getValue() : (cd.sx != null ? cd.sx : "");
+                String yVal = cd.by != null ? cd.by.getValue() : (cd.sy != null ? cd.sy : "");
+                String zVal = cd.bz != null ? cd.bz.getValue() : (cd.sz != null ? cd.sz : "");
+                
+                if (standard[cd.dim][0].getValue().isEmpty()) {
+                    standard[cd.dim][0].setValue(xVal);
+                    standard[cd.dim][1].setValue(yVal);
+                    standard[cd.dim][2].setValue(zVal);
+                } else {
+                    String existingX = standard[cd.dim][0].getValue();
+                    String existingY = standard[cd.dim][1].getValue();
+                    String existingZ = standard[cd.dim][2].getValue();
+                    standard[cd.dim][0].setValue(existingX + ";;" + xVal);
+                    standard[cd.dim][1].setValue(existingY + ";;" + yVal);
+                    standard[cd.dim][2].setValue(existingZ + ";;" + zVal);
+                }
             }
         }
         return standard;
@@ -437,8 +450,17 @@ class DimensionPickerScreen extends Screen {
         int startY = panelY + panelPadding + 20;
         for (int i = 0; i < BaseWaypointFormScreen.DIMENSION_LABELS.length; i++) {
             final int dim = i;
+            String label = BaseWaypointFormScreen.DIMENSION_LABELS[i];
+            int color = switch (i) {
+                case 0 -> 0x00AA00;   // §2 - темно-зеленый (Верхний мир)
+                case 1 -> 0xAA0000;   // §4 - темно-красный (Крыша ада)
+                case 2 -> 0xFF5555;   // §c - ярко-красный (Ад)
+                case 3 -> 0xAA00AA;   // §5 - фиолетовый (Энд)
+                default -> 0xFFFFFF;
+            };
+            String cleanLabel = label.replaceAll("§[0-9a-f]", "");
             addRenderableWidget(Button.builder(
-                    Component.literal(BaseWaypointFormScreen.DIMENSION_LABELS[i]),
+                    Component.literal(cleanLabel).withStyle(style -> style.withColor(color)),
                     b -> {
                         parent.addDimensionRow(dim);
                         if (minecraft != null) minecraft.setScreen(parent);

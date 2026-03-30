@@ -118,12 +118,12 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
 
     @Unique
     private static void startNavigator(String text) {
-        Map<ArrowModule.Dimension, BlockPos> targets = parseAdvancement(text);
+        Map<ArrowModule.Dimension, List<BlockPos>> targets = parseAdvancement(text);
 
         ArrowModule arrow = ArrowModule.getInstance();
-        arrow.setTarget(ArrowModule.Dimension.OVERWORLD, targets.get(ArrowModule.Dimension.OVERWORLD));
-        arrow.setTarget(ArrowModule.Dimension.NETHER,    targets.get(ArrowModule.Dimension.NETHER));
-        arrow.setTarget(ArrowModule.Dimension.END,        targets.get(ArrowModule.Dimension.END));
+        arrow.setTargets(ArrowModule.Dimension.OVERWORLD, targets.get(ArrowModule.Dimension.OVERWORLD));
+        arrow.setTargets(ArrowModule.Dimension.NETHER,    targets.get(ArrowModule.Dimension.NETHER));
+        arrow.setTargets(ArrowModule.Dimension.END,        targets.get(ArrowModule.Dimension.END));
     }
 
 

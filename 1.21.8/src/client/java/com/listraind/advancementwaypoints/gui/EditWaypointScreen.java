@@ -3,12 +3,16 @@ package com.listraind.advancementwaypoints.gui;
 import com.google.gson.JsonObject;
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.config.WaypointManager;
+import com.listraind.advancementwaypoints.config.WaypointManager.CoordsPerDimension;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
+
+import java.util.List;
 
 public class EditWaypointScreen extends BaseWaypointFormScreen {
 
     private final String originalId;
+    private List<WaypointManager.CoordsPerDimension> allOriginalCoords;
 
     public EditWaypointScreen(JsonObject waypointJson) {
         super(Component.literal("Редактирование вейпоинта"));
@@ -28,6 +32,8 @@ public class EditWaypointScreen extends BaseWaypointFormScreen {
     }
 
     private void parseDescription(String desc) {
+        allOriginalCoords = WaypointManager.parseAllCoordsFromDescription(desc);
+
         String[][] parsed = WaypointManager.parseCoordsFromDescription(desc);
         activeCoords.clear();
         for (int i = 0; i < 4; i++) {
@@ -35,6 +41,14 @@ public class EditWaypointScreen extends BaseWaypointFormScreen {
                 activeCoords.add(new CoordData(i, parsed[i][0], parsed[i][1], parsed[i][2]));
             }
         }
+        
+        for (CoordsPerDimension cpd : allOriginalCoords) {
+            for (int j = 1; j < cpd.coords.size(); j++) {
+                String[] c = cpd.coords.get(j);
+                activeCoords.add(new CoordData(cpd.dimIndex, c[0], c[1], c[2]));
+            }
+        }
+        
         savedDescription = WaypointManager.parseExtraFromDescription(desc);
     }
 
@@ -57,7 +71,7 @@ public class EditWaypointScreen extends BaseWaypointFormScreen {
         if (name.isEmpty()) name = "waypoint";
         name = translateColorCodes(name);
 
-        String description = buildDescription();
+        String description = WaypointManager.buildDescription(getStandardCoordFields(), savedDescription, allOriginalCoords);
         String iconId = getIconId();
 
         WaypointManager.saveWaypoint(originalId, name, description, iconId, selectedParentId);

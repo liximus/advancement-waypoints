@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -27,9 +28,74 @@ public class WaypointManager {
     };
 
     private static final Pattern ALL_COORD_BLOCKS = Pattern.compile(
-            "(?:§[24e])?(Верхний мир|Крыша ада|Ад|Энд):\\s*\\n\\s*§6X:-?\\d+\\s*Y:-?\\d+\\s*Z:-?\\d+",
+            "(?:§[24e])?(Верхний мир|Крыша ада|Ад|Энд):\\s*\\n((?:\\s*§6X:-?\\d+\\s*Y:-?\\d+\\s*Z:-?\\d+\\s*\\n?)+)",
             Pattern.CASE_INSENSITIVE
     );
+
+    private static final Pattern SINGLE_COORD = Pattern.compile(
+            "§6X:(-?\\d+)\\s*Y:(-?\\d+)\\s*Z:(-?\\d+)",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    public static class CoordsPerDimension {
+        public final int dimIndex;
+        public final List<String[]> coords;
+        
+        public CoordsPerDimension(int dimIndex) {
+            this.dimIndex = dimIndex;
+            this.coords = new ArrayList<>();
+        }
+        
+        public void add(String x, String y, String z) {
+            coords.add(new String[]{x, y, z});
+        }
+    }
+
+    public static List<CoordsPerDimension> parseAllCoordsFromDescription(String desc) {
+        List<CoordsPerDimension> result = new ArrayList<>();
+        List<List<String[]>> dimCoords = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            dimCoords.add(new ArrayList<>());
+        }
+
+        Matcher entryMatcher = ALL_COORD_BLOCKS.matcher(desc);
+        while (entryMatcher.find()) {
+            String dimName = entryMatcher.group(1);
+            String coordsBlock = entryMatcher.group(2);
+
+            int dimIndex = getDimensionIndex(dimName);
+            if (dimIndex == -1) continue;
+
+            Matcher coordMatcher = SINGLE_COORD.matcher(coordsBlock);
+            while (coordMatcher.find()) {
+                dimCoords.get(dimIndex).add(new String[]{
+                        coordMatcher.group(1),
+                        coordMatcher.group(2),
+                        coordMatcher.group(3)
+                });
+            }
+        }
+
+        for (int i = 0; i < 4; i++) {
+            if (!dimCoords.get(i).isEmpty()) {
+                CoordsPerDimension data = new CoordsPerDimension(i);
+                for (String[] c : dimCoords.get(i)) {
+                    data.add(c[0], c[1], c[2]);
+                }
+                result.add(data);
+            }
+        }
+
+        return result;
+    }
+
+    private static int getDimensionIndex(String dimName) {
+        if (dimName.equalsIgnoreCase("Верхний мир")) return 0;
+        if (dimName.equalsIgnoreCase("Крыша ада")) return 1;
+        if (dimName.equalsIgnoreCase("Ад")) return 2;
+        if (dimName.equalsIgnoreCase("Энд")) return 3;
+        return -1;
+    }
 
     public static void generateAndSave(String name, EditBox[][] coordFields, String iconId,
                                        ResourceLocation parentId, String desc) {
@@ -140,14 +206,71 @@ public class WaypointManager {
         return fakeObj;
     }
 
-    public static String buildDescription(EditBox[][] coordFields, String extra) {
+    public static String buildDescription(EditBox[][] coordFields, String extra, List<CoordsPerDimension> allOriginalCoords) {
         StringBuilder sb = new StringBuilder();
         if (!extra.isEmpty()) {
-            if (sb.length() > 0) sb.append("\n\n");
             sb.append(extra);
         }
-        for (int i = 0; i < 4; i++) appendCoords(sb, DIM_LABELS[i], coordFields[i]);
+
+        boolean[] hasNewCoords = new boolean[4];
+        for (int i = 0; i < 4; i++) {
+            String x = coordFields[i][0].getValue().trim();
+            hasNewCoords[i] = !x.isEmpty();
+        }
+
+        for (int i = 0; i < 4; i++) {
+            CoordsPerDimension original = null;
+            for (CoordsPerDimension cpd : allOriginalCoords) {
+                if (cpd.dimIndex == i) {
+                    original = cpd;
+                    break;
+                }
+            }
+
+            if (hasNewCoords[i]) {
+                if (sb.length() > 0) sb.append("\n\n");
+                sb.append(DIM_LABELS[i]).append(":\n");
+
+                String x = coordFields[i][0].getValue().trim();
+                String y = coordFields[i][1].getValue().trim();
+                String z = coordFields[i][2].getValue().trim();
+                
+                String[] xParts = x.split(";;");
+                String[] yParts = y.split(";;");
+                String[] zParts = z.split(";;");
+                
+                for (int j = 0; j < xParts.length; j++) {
+                    if (j > 0) sb.append("\n");
+                    String xVal = xParts[j].trim().isEmpty() ? "0" : xParts[j].trim();
+                    String yVal = j < yParts.length && !yParts[j].trim().isEmpty() ? yParts[j].trim() : "0";
+                    String zVal = j < zParts.length && !zParts[j].trim().isEmpty() ? zParts[j].trim() : "0";
+                    sb.append("§6X:").append(xVal)
+                      .append(" Y:").append(yVal)
+                      .append(" Z:").append(zVal);
+                }
+
+                if (original != null && original.coords.size() > xParts.length) {
+                    for (int j = xParts.length; j < original.coords.size(); j++) {
+                        String[] c = original.coords.get(j);
+                        sb.append("\n§6X:").append(c[0]).append(" Y:").append(c[1]).append(" Z:").append(c[2]);
+                    }
+                }
+            } else if (original != null) {
+                if (sb.length() > 0) sb.append("\n\n");
+                sb.append(DIM_LABELS[i]).append(":\n");
+                for (int j = 0; j < original.coords.size(); j++) {
+                    String[] c = original.coords.get(j);
+                    if (j > 0) sb.append("\n");
+                    sb.append("§6X:").append(c[0]).append(" Y:").append(c[1]).append(" Z:").append(c[2]);
+                }
+            }
+        }
+
         return sb.toString();
+    }
+
+    public static String buildDescription(EditBox[][] coordFields, String extra) {
+        return buildDescription(coordFields, extra, new ArrayList<>());
     }
 
 

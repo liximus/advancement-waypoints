@@ -1,16 +1,22 @@
 package com.listraind.advancementwaypoints.mixin.client;
 
+import com.google.gson.JsonObject;
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.AdvancementWaypointsClient.ParsedAdvancement;
 import com.listraind.advancementwaypoints.advancementMixinHelpers.ICustomAdvancementApplier;
 import com.listraind.advancementwaypoints.config.AdvancementLoader;
+import com.listraind.advancementwaypoints.config.ConfigManager;
+import com.listraind.advancementwaypoints.mixin.client.DisplayInfoAccessor;
 import net.minecraft.advancements.*;
 import net.minecraft.advancements.critereon.ImpossibleTrigger;
 import net.minecraft.client.multiplayer.ClientAdvancements;
 import net.minecraft.core.ClientAsset;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundUpdateAdvancementsPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -62,6 +68,8 @@ public abstract class ClientAdvancementsMixin implements ICustomAdvancementAppli
                 });
             }
             advWp_vanillaOriginals.clear();
+
+            applyOverrides();
 
             AdvancementLoader.LoadResult result = AdvancementLoader.loadAll(this.tree);
             if (result.advancements.isEmpty()) { refreshUI(); return; }
@@ -117,6 +125,38 @@ public abstract class ClientAdvancementsMixin implements ICustomAdvancementAppli
             refreshUI();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Unique
+    private void applyOverrides() {
+        List<JsonObject> overrides = ConfigManager.loadOverrides();
+        if (overrides.isEmpty()) return;
+
+        for (JsonObject o : overrides) {
+            if (!o.has("id")) continue;
+            String idStr = o.get("id").getAsString();
+            ResourceLocation id = ResourceLocation.parse(idStr);
+            AdvancementNode node = this.tree.get(id);
+            if (node == null) continue;
+
+            node.holder().value().display().ifPresent(display -> {
+                if (o.has("title")) {
+                    ((DisplayInfoAccessor) display).pepe_setTitle(Component.literal(o.get("title").getAsString()));
+                }
+                if (o.has("description")) {
+                    ((DisplayInfoAccessor) display).pepe_setDescription(Component.literal(o.get("description").getAsString()));
+                }
+                if (o.has("icon")) {
+                    String iconStr = o.get("icon").getAsString();
+                    try {
+                        var itemOpt = BuiltInRegistries.ITEM.get(ResourceLocation.parse(iconStr));
+                        itemOpt.ifPresent(item -> ((DisplayInfoAccessor) display).pepe_setIcon(new ItemStack(item)));
+                    } catch (Exception e) {
+                        ((DisplayInfoAccessor) display).pepe_setIcon(new ItemStack(Items.PAPER));
+                    }
+                }
+            });
         }
     }
 

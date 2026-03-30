@@ -26,30 +26,38 @@ public class AdvancementParser {
     };
 
 
-    public static Map<ArrowModule.Dimension, BlockPos> parseAdvancement(String text) {
-        Map<ArrowModule.Dimension, BlockPos> result = new EnumMap<>(ArrowModule.Dimension.class);
+    public static Map<ArrowModule.Dimension, List<BlockPos>> parseAdvancement(String text) {
+        Map<ArrowModule.Dimension, List<BlockPos>> result = new EnumMap<>(ArrowModule.Dimension.class);
+        for (ArrowModule.Dimension dim : ArrowModule.Dimension.values()) {
+            result.put(dim, new ArrayList<>());
+        }
+        
         String lower = text.toLowerCase();
 
-        TreeMap<Integer, ArrowModule.Dimension> sections = new TreeMap<>();
-
+        List<KeywordMatch> allMatches = new ArrayList<>();
         for (int d = 0; d < KEYWORDS.length; d++) {
             for (String kw : KEYWORDS[d]) {
-                int idx = lower.indexOf(kw);
-                if (idx != -1) {
-                    sections.putIfAbsent(idx, DIMS[d]);
+                int idx = 0;
+                while ((idx = lower.indexOf(kw, idx)) != -1) {
+                    allMatches.add(new KeywordMatch(idx, DIMS[d]));
+                    idx += kw.length();
                 }
             }
         }
 
-        List<Map.Entry<Integer, ArrowModule.Dimension>> entries = new ArrayList<>(sections.entrySet());
+        allMatches.sort(Comparator.comparingInt(m -> m.position));
 
-        for (int i = 0; i < entries.size(); i++) {
-            int start = entries.get(i).getKey();
-            int end = (i + 1 < entries.size()) ? entries.get(i + 1).getKey() : text.length();
+        for (int i = 0; i < allMatches.size(); i++) {
+            int start = allMatches.get(i).getKey();
+            int end = (i + 1 < allMatches.size()) ? allMatches.get(i + 1).getKey() : text.length();
 
-            Matcher m = COORD_PATTERN.matcher(text.substring(start, end));
-            if (m.find()) {
-                result.put(entries.get(i).getValue(), new BlockPos(
+            String sectionText = text.substring(start, end);
+            Matcher m = COORD_PATTERN.matcher(sectionText);
+
+            ArrowModule.Dimension dim = allMatches.get(i).getValue();
+            List<BlockPos> coords = result.get(dim);
+            while (m.find()) {
+                coords.add(new BlockPos(
                         Integer.parseInt(m.group(1)),
                         Integer.parseInt(m.group(2)),
                         Integer.parseInt(m.group(3))
@@ -58,5 +66,24 @@ public class AdvancementParser {
         }
 
         return result;
+    }
+
+    private static class KeywordMatch implements Map.Entry<Integer, ArrowModule.Dimension> {
+        final int position;
+        final ArrowModule.Dimension dimension;
+
+        KeywordMatch(int position, ArrowModule.Dimension dimension) {
+            this.position = position;
+            this.dimension = dimension;
+        }
+
+        @Override
+        public Integer getKey() { return position; }
+
+        @Override
+        public ArrowModule.Dimension getValue() { return dimension; }
+
+        @Override
+        public ArrowModule.Dimension setValue(ArrowModule.Dimension value) { throw new UnsupportedOperationException(); }
     }
 }

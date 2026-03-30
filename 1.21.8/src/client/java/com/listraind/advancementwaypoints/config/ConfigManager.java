@@ -35,6 +35,42 @@ public class ConfigManager {
         jsonFileHelper.writeArray(worldDir().resolve("overrides.json"), list);
     }
 
+    public static JsonObject loadOverride(String id) {
+        List<JsonObject> overrides = loadOverrides();
+        for (JsonObject o : overrides) {
+            if (o.has("id") && o.get("id").getAsString().equals(id)) {
+                return o;
+            }
+        }
+        return null;
+    }
+
+    public static void saveOverride(JsonObject overrideData) {
+        List<JsonObject> overrides = loadOverrides();
+        String id = overrideData.get("id").getAsString();
+        JsonObject existing = null;
+        for (JsonObject o : overrides) {
+            if (o.has("id") && o.get("id").getAsString().equals(id)) {
+                existing = o;
+                break;
+            }
+        }
+        if (existing != null) {
+            for (var entry : overrideData.entrySet()) {
+                existing.add(entry.getKey(), entry.getValue());
+            }
+        } else {
+            overrides.add(overrideData);
+        }
+        saveOverrides(overrides);
+    }
+
+    public static void removeOverride(String id) {
+        List<JsonObject> overrides = loadOverrides();
+        overrides.removeIf(o -> o.has("id") && o.get("id").getAsString().equals(id));
+        saveOverrides(overrides);
+    }
+
     public static ResourceLocation getLastParent() {
         return lastParent;
     }
