@@ -91,13 +91,23 @@ public class CoordParser {
     }
 
     public static String extractExtra(String desc) {
-        return COORD_BLOCK_PATTERN.matcher(desc).replaceAll("").replaceAll("\\n{3,}", "\n\n").trim();
+        String result = COORD_BLOCK_PATTERN.matcher(desc).replaceAll("").replaceAll("\\n{3,}", "\n\n").trim();
+        // Удаляем накопившиеся коды формата §f в начале
+        while (result.startsWith("§f")) {
+            result = result.substring(2);
+        }
+        return result;
     }
 
     public static String buildDescription(List<DimCoords> coords, String extra) {
         StringBuilder sb = new StringBuilder();
-        if (extra != null && !extra.isEmpty()) sb.append("§f").append(extra);
-
+        if (extra != null && !extra.isEmpty()) {
+            String cleanExtra = extra;
+            while (cleanExtra.startsWith("§f")) {
+                cleanExtra = cleanExtra.substring(2);
+            }
+            if (!cleanExtra.isEmpty()) sb.append("§f").append(cleanExtra);
+        }
         for (DimCoords dc : coords) {
             if (dc.coords().isEmpty()) continue;
             for (String[] c : dc.coords()) {

@@ -27,11 +27,11 @@ public class MainMenuScreen extends Screen {
         int bw = W - 40;
         int bx = cx + 20;
 
-        addRenderableWidget(Button.builder(Component.literal("Создать вейпоинт"), b ->
+        addRenderableWidget(Button.builder(Component.literal("Создать"), b ->
                 minecraft.setScreen(new CreateWaypointScreen())
         ).bounds(bx, cy + 25, bw, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Редактировать вейпоинт"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Редактировать"), b -> {
             AdvancementsScreen adv = new AdvancementsScreen(minecraft.player.connection.getAdvancements(), this);
             ((IAdvancementScreenCustom) adv).advWaypoint_setSelectMode(id -> {
                 var data = WaypointStorage.getWaypointOrVanilla(id);

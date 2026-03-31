@@ -2,15 +2,20 @@ package com.listraind.advancementwaypoints.navigator;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 
 public class Navigator {
 
     private static Navigator INSTANCE;
     private final Map<Dimension, List<BlockPos>> targets = new EnumMap<>(Dimension.class);
+    private ResourceLocation currId = null;
 
     public enum Dimension {
         OVERWORLD, NETHER, END;
@@ -56,4 +61,10 @@ public class Navigator {
 
     public boolean hasAnyTarget() { return !targets.isEmpty(); }
     public void clearAll() { targets.clear(); }
+    public void setCurrentId(ResourceLocation id) {
+        currId = id;
+    }
+    public ResourceLocation getCurrentId() {
+        return currId;
+    }
 }

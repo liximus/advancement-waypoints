@@ -11,8 +11,21 @@ public class CreateWaypointScreen extends WaypointFormScreen {
     private boolean initialized = false;
 
     public CreateWaypointScreen() {
-        super(Component.literal("Создание вейпоинта"));
+        super(Component.literal( "Создание вейпоинта"));
         selectedParentId = WaypointStorage.getLastParent();
+    }
+
+    @Override
+    protected void saveState() {
+        if (nameField != null) savedName = nameField.getValue();
+        if (descField != null) savedDesc = descField.getValue();
+        if(hadParentBefore) {
+            for (CoordRow cr : coordRows) {
+                if (cr.bx != null) cr.sx = cr.bx.getValue();
+                if (cr.by != null) cr.sy = cr.by.getValue();
+                if (cr.bz != null) cr.sz = cr.bz.getValue();
+            }
+        }
     }
 
     @Override
@@ -30,6 +43,14 @@ public class CreateWaypointScreen extends WaypointFormScreen {
             initialized = true;
         }
         super.init();
+    }
+
+    @Override
+    public void onParentSelected(ResourceLocation newParent) {
+        saveState();
+        selectedParentId = newParent;
+        hadParentBefore = true;
+        minecraft.setScreen(new CreateWaypointScreen());
     }
 
     @Override

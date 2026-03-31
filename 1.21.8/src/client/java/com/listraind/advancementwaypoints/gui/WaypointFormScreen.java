@@ -94,7 +94,7 @@ public abstract class WaypointFormScreen extends Screen {
         }).bounds(fl, y, bw, FH).build());
         y += FH + gap;
 
-        String pName = selectedParentId != null ? parentName() : "нет";
+        String pName = selectedParentId != null ? parentName() : "нет§3(вкладка)";
         parentButton = addRenderableWidget(Button.builder(Component.literal("Parent: " + pName), b -> {
             saveState();
             setFocused(null);
@@ -105,8 +105,7 @@ public abstract class WaypointFormScreen extends Screen {
 
         Button resetBtn = addRenderableWidget(Button.builder(Component.literal("X"), b -> {
             selectedParentId = null;
-            parentButton.setMessage(Component.literal("Parent: нет"));
-            coordRows.clear();
+            parentButton.setMessage(Component.literal("Parent: нет§3(вкладка)"));
             saveState();
             rebuildWidgets();
         }).bounds(fl + bw + 5, y, 20, FH).build());
@@ -297,7 +296,7 @@ public abstract class WaypointFormScreen extends Screen {
 
     protected String buildFinalDescription() {
         String desc = isRoot() ? (descField != null ? descField.getValue().trim() : savedDesc) 
-                               : CoordParser.buildDescription(collectCoords(), descField != null ? descField.getValue().trim() : savedDesc);
+                               : CoordParser.buildDescription(selectedParentId != null ? collectCoords() : new ArrayList<>(), descField != null ? descField.getValue().trim() : savedDesc);
         return colorCodes(desc);
     }
 

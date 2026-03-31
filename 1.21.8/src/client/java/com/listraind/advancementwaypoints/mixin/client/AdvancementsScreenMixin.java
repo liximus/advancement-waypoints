@@ -1,5 +1,6 @@
 package com.listraind.advancementwaypoints.mixin.client;
 
+import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.advancement.CoordParser;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
 import com.listraind.advancementwaypoints.navigator.Navigator;
@@ -10,7 +11,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.advancements.AdvancementTab;
 import net.minecraft.client.gui.screens.advancements.AdvancementWidget;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
-import net.minecraft.client.multiplayer.ClientAdvancements;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-@Mixin(AdvancementsScreen.class)
+@Mixin(value = AdvancementsScreen.class, priority = 500)
 public abstract class AdvancementsScreenMixin extends Screen implements IAdvancementScreenCustom {
 
     @Shadow private AdvancementTab selectedTab;
@@ -47,36 +47,46 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
         lastWinY = y;
     }
 
-    @Inject(method = "mouseClicked", at = @At("HEAD"))
+    @Inject(method = "mouseClicked", at = @At("RETURN"))
     private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
+        AdvancementWaypoints.LOGGER.info("123123123213");
         if (btn != 0 || selectedTab == null) return;
 
         AdvancementTabAccessor tab = (AdvancementTabAccessor) selectedTab;
-        int relX = (int) mx - (lastWinX + 9);
-        int relY = (int) my - (lastWinY + 18);
+        int contentLeft = lastWinX + 9;
+        int contentTop = lastWinY + 18;
+        int relX = (int) mx - contentLeft;
+        int relY = (int) my - contentTop;
         int sx = Mth.floor(tab.getScrollX());
         int sy = Mth.floor(tab.getScrollY());
 
         for (AdvancementWidget w : tab.getWidgets().values()) {
             AdvancementWidgetAccessor wa = (AdvancementWidgetAccessor) w;
-            if (!wa.invokeIsMouseOver(sx, sy, relX, relY)) continue;
-
-            AdvancementNode node = wa.getAdvancementNode();
-            node.holder().value().display().ifPresent(d -> {
-                ResourceLocation id = node.holder().id();
-                if (selectMode) {
-                    selectCallback.accept(id);
-                    minecraft.setScreen(screenToOpen != null ? screenToOpen : lastScreen);
-                } else {
-                    Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
-                    Navigator nav = Navigator.getInstance();
-                    nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
-                    nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
-                    nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
-                    Minecraft.getInstance().setScreen(null);
-                }
-            });
-            break;
+            if (wa.invokeIsMouseOver(sx, sy, relX, relY)) {
+                AdvancementNode node = wa.getAdvancementNode();
+                node.holder().value().display().ifPresent(d -> {
+                    ResourceLocation id = node.holder().id();
+                    if (selectMode) {
+                        selectCallback.accept(id);
+                        minecraft.setScreen(screenToOpen != null ? screenToOpen : lastScreen);
+                    } else {
+                        Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
+                        Navigator nav = Navigator.getInstance();
+                        if(nav.getCurrentId() != id) {
+                            nav.setCurrentId(id);
+                            nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
+                            nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
+                            nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
+                        }
+                        else{
+                            nav.clearAll();
+                            nav.setCurrentId(null);
+                        }
+                        Minecraft.getInstance().setScreen(null);
+                    }
+                });
+                break;
+            }
         }
     }
 
