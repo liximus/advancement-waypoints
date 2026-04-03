@@ -2,6 +2,7 @@ package com.listraind.advancementwaypoints.advancement;
 
 import com.listraind.advancementwaypoints.navigator.Navigator;
 import net.minecraft.core.BlockPos;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -36,6 +37,7 @@ public class CoordParser {
             "§6X:(-?\\d+)\\s*Y:(-?\\d+)\\s*Z:(-?\\d+)", Pattern.CASE_INSENSITIVE
     );
 
+    @Nullable
     public static Map<Navigator.Dimension, List<BlockPos>> parseForNavigation(String text) {
         Map<Navigator.Dimension, List<BlockPos>> result = new EnumMap<>(Navigator.Dimension.class);
         for (Navigator.Dimension dim : Navigator.Dimension.values()) result.put(dim, new ArrayList<>());
@@ -66,7 +68,9 @@ public class CoordParser {
                 ));
             }
         }
-        return result;
+
+        boolean hasAny = result.values().stream().anyMatch(list -> !list.isEmpty());
+        return hasAny ? result : null;
     }
 
     public static List<DimCoords> parseAllCoords(String desc) {

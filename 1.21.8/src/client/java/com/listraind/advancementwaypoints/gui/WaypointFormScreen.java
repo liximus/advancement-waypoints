@@ -17,13 +17,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import com.listraind.advancementwaypoints.DarkModeChecker;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class WaypointFormScreen extends Screen {
 
-    protected static final ResourceLocation BG = ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
+    protected static ResourceLocation BG = DarkModeChecker.isDarkModeEnabled() ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png") ;
     protected static final int FH = 18, BH = 20, CFW = 52, GAP = 4, FILL_W = 60;
 
     protected Item selectedIcon = Items.GRASS_BLOCK;
@@ -40,6 +41,10 @@ public abstract class WaypointFormScreen extends Screen {
     protected float scale = 1f;
     protected int vw, vh, px, py, pw, ph;
     protected int sep1Y, sep2Y;
+
+    public static void setDarkMode(boolean darkMode) {
+        BG = darkMode ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
+    }
 
     protected static class CoordRow {
         int dim;
@@ -336,9 +341,12 @@ public abstract class WaypointFormScreen extends Screen {
     }
 
     private void openParentPicker() {
-        AdvancementsScreen adv = new AdvancementsScreen(minecraft.player.connection.getAdvancements(), this);
-        minecraft.setScreen(adv);
-        ((IAdvancementScreenCustom) adv).advWaypoint_setSelectMode(id -> onParentSelected(id));
+        minecraft.setScreen(new AdvancementsScreen(minecraft.player.connection.getAdvancements(), this));
+
+        if (minecraft.screen instanceof IAdvancementScreenCustom customScreen) {
+            customScreen.advWaypoint_setParentScreen(this);
+            customScreen.advWaypoint_setSelectMode(this::onParentSelected);
+        }
     }
 
     private String shortBgName(String full) {

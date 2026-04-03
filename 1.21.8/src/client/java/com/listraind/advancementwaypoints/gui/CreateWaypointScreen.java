@@ -11,7 +11,7 @@ public class CreateWaypointScreen extends WaypointFormScreen {
     private boolean initialized = false;
 
     public CreateWaypointScreen() {
-        super(Component.literal( "Создание вейпоинта"));
+        super(Component.literal( "§8Создание вейпоинта"));
         selectedParentId = WaypointStorage.getLastParent();
     }
 

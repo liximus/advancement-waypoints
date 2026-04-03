@@ -1,0 +1,13 @@
+{
+	"required": false,
+	"package": "com.listraind.advancementwaypoints.mixin.compat",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"BetterAdvancementsScreenMixin",
+		"BetterAdvancementTabAccessor",
+		"BetterAdvancementWidgetMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}

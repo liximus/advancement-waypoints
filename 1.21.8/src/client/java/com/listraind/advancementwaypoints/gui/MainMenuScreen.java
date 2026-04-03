@@ -1,6 +1,7 @@
 package com.listraind.advancementwaypoints.gui;
 
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
+import com.listraind.advancementwaypoints.DarkModeChecker;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,11 +14,15 @@ import net.minecraft.resources.ResourceLocation;
 
 public class MainMenuScreen extends Screen {
 
-    private static final ResourceLocation BG = ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
+    protected static ResourceLocation BG = DarkModeChecker.isDarkModeEnabled() ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png") ;
     private static final int W = 200, H = 90;
 
     public MainMenuScreen() {
-        super(Component.literal("Меню вейпоинтов"));
+        super(Component.literal("§8Меню вейпоинтов"));
+    }
+
+    public static void setDarkMode(boolean darkMode) {
+        BG = darkMode ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
     }
 
     @Override
@@ -32,12 +37,15 @@ public class MainMenuScreen extends Screen {
         ).bounds(bx, cy + 25, bw, 20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Редактировать"), b -> {
-            AdvancementsScreen adv = new AdvancementsScreen(minecraft.player.connection.getAdvancements(), this);
-            ((IAdvancementScreenCustom) adv).advWaypoint_setSelectMode(id -> {
-                var data = WaypointStorage.getWaypointOrVanilla(id);
-                ((IAdvancementScreenCustom) adv).advWaypoint_setScreenToOpen(new EditWaypointScreen(data));
-            });
-            minecraft.setScreen(adv);
+            minecraft.setScreen(new AdvancementsScreen(minecraft.player.connection.getAdvancements(), this));
+
+            if (minecraft.screen instanceof IAdvancementScreenCustom customScreen) {
+                customScreen.advWaypoint_setParentScreen(this);
+                customScreen.advWaypoint_setSelectMode(id -> {
+                    var data = WaypointStorage.getWaypointOrVanilla(id);
+                    customScreen.advWaypoint_setScreenToOpen(new EditWaypointScreen(data));
+                });
+            }
         }).bounds(bx, cy + 55, bw, 20).build());
     }
 

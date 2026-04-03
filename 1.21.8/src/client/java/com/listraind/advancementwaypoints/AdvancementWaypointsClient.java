@@ -9,8 +9,13 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
 import org.lwjgl.glfw.GLFW;
 
 public class AdvancementWaypointsClient implements ClientModInitializer {
@@ -20,7 +25,10 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
         Navigator.getInstance().initHud();
 
         KeyMapping openKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.waypoints.open", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, "category.waypoints"
+                "key.advancementwaypoints.open",
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_J,
+                "Навигация по достижениям"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -30,11 +38,26 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
         });
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) ->
-                dispatcher.register(ClientCommandManager.literal("waypointreload").executes(ctx -> {
-                    reloadAdvancements();
+                dispatcher.register(ClientCommandManager.literal("advwaypoints").executes(ctx -> {
+                    Minecraft.getInstance().execute(() -> {
+                        Minecraft.getInstance().setScreen(new MainMenuScreen());
+                    });
                     return 1;
                 }))
         );
+
+        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES)
+                .registerReloadListener(new SimpleSynchronousResourceReloadListener() {
+                    @Override
+                    public ResourceLocation getFabricId() {
+                        return ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "reload_listener");
+                    }
+
+                    @Override
+                    public void onResourceManagerReload(ResourceManager manager) {
+                        DarkModeChecker.setModDarkMode();
+                    }
+                });
     }
 
     public static void reloadAdvancements() {

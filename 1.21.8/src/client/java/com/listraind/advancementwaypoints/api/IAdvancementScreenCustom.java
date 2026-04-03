@@ -5,7 +5,9 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.function.Consumer;
 
+
 public interface IAdvancementScreenCustom {
-    void advWaypoint_setSelectMode(Consumer<ResourceLocation> callback);
-    void advWaypoint_setScreenToOpen(Screen screen);
+    void advWaypoint_setSelectMode(Consumer<ResourceLocation> cb);
+    void advWaypoint_setScreenToOpen(Screen s);
+    void advWaypoint_setParentScreen(Screen s);
 }

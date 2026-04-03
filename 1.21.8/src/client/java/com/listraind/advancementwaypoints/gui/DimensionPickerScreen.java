@@ -1,6 +1,7 @@
 package com.listraind.advancementwaypoints.gui;
 
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
+import com.listraind.advancementwaypoints.DarkModeChecker;
 import com.listraind.advancementwaypoints.advancement.CoordParser;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -11,15 +12,19 @@ import net.minecraft.resources.ResourceLocation;
 
 public class DimensionPickerScreen extends Screen {
 
-    private static final ResourceLocation BG = ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
+    protected static ResourceLocation BG = DarkModeChecker.isDarkModeEnabled() ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png") ;
     private static final int[] COLORS = {0x00AA00, 0xAA0000, 0xFF5555, 0xAA00AA};
 
     private final WaypointFormScreen parent;
     private int panelX, panelY, panelW, panelH;
 
     public DimensionPickerScreen(WaypointFormScreen parent) {
-        super(Component.literal("Выберите измерение"));
+        super(Component.literal("§8Выберите измерение"));
         this.parent = parent;
+    }
+
+    public static void setDarkMode(boolean darkMode) {
+        BG = darkMode ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
     }
 
     @Override

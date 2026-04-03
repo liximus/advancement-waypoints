@@ -27,6 +27,11 @@
 		{
 			"config": "advancement-waypoints.client.mixins.json",
 			"environment": "client"
+		},
+		"advancement-waypoints.compat.mixins.json",
+		{
+			"config": "advancement-waypoints.compat.client.mixins.json",
+			"environment": "client"
 		}
 	],
 	"depends": {

@@ -17,7 +17,7 @@ public class EditWaypointScreen extends WaypointFormScreen {
     private final String originalId;
 
     public EditWaypointScreen(JsonObject data) {
-        super(Component.literal("Редактирование вейпоинта"));
+        super(Component.literal("§8Редактирование вейпоинта"));
         this.originalId = ConfigIO.str(data, "id", "");
         this.isVanilla = !originalId.contains("advwaypoints");
 

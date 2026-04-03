@@ -1,6 +1,7 @@
 package com.listraind.advancementwaypoints.gui;
 
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
+import com.listraind.advancementwaypoints.DarkModeChecker;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -23,8 +24,8 @@ import java.util.function.Consumer;
 
 public class ItemPickerScreen extends Screen {
 
-    private static final ResourceLocation BG = ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
-    private static final ResourceLocation SLOTS = ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/slots.png");
+    protected static ResourceLocation BG = DarkModeChecker.isDarkModeEnabled() ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png") ;
+    private static ResourceLocation SLOTS =  DarkModeChecker.isDarkModeEnabled() ?  ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/slotsdark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/slots.png");
     private static final ResourceLocation SCROLLER = ResourceLocation.withDefaultNamespace("container/creative_inventory/scroller");
     private static final int CELL = 18, SBW = 12, SBH = 15;
 
@@ -34,6 +35,11 @@ public class ItemPickerScreen extends Screen {
             "piston", "sticky_piston",
             "target", "redstone_lamp", "redstone_block"
     );
+
+    public static void setDarkMode(boolean darkMode) {
+        BG = darkMode ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
+        SLOTS = darkMode ?  ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/slotsdark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/slots.png");
+    }
 
     private final Screen parent;
     private final Consumer<Item> callback;
@@ -51,7 +57,7 @@ public class ItemPickerScreen extends Screen {
     }
 
     public ItemPickerScreen(Screen parent, Consumer<Item> callback, boolean blocksOnly) {
-        super(Component.literal(blocksOnly ? "Выбор фона" : "Выбор иконки"));
+        super(Component.literal(blocksOnly ? "§8Выбор фона" : "§8Выбор иконки"));
         this.parent = parent;
         this.callback = callback;
         this.blocksOnly = blocksOnly;

@@ -1,6 +1,5 @@
 package com.listraind.advancementwaypoints.mixin.client;
 
-import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.advancement.CoordParser;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
 import com.listraind.advancementwaypoints.navigator.Navigator;
@@ -9,7 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.advancements.AdvancementTab;
-import net.minecraft.client.gui.screens.advancements.AdvancementWidget;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -31,15 +29,26 @@ import java.util.function.Consumer;
 @Mixin(value = AdvancementsScreen.class, priority = 500)
 public abstract class AdvancementsScreenMixin extends Screen implements IAdvancementScreenCustom {
 
-    @Shadow private AdvancementTab selectedTab;
-    @Final @Shadow private Screen lastScreen;
+    @Shadow
+    private AdvancementTab selectedTab;
+    @Final
+    @Shadow
+    private Screen lastScreen;
 
-    @Unique private int lastWinX, lastWinY;
-    @Unique private boolean selectMode;
-    @Unique private Consumer<ResourceLocation> selectCallback;
-    @Unique private Screen screenToOpen;
+    @Unique
+    private int lastWinX, lastWinY;
+    @Unique
+    private boolean selectMode;
+    @Unique
+    private Consumer<ResourceLocation> selectCallback;
+    @Unique
+    private Screen screenToOpen;
+    @Unique
+    private Screen parentScreen;
 
-    protected AdvancementsScreenMixin(Component t) { super(t); }
+    protected AdvancementsScreenMixin(Component t) {
+        super(t);
+    }
 
     @Inject(method = "renderWindow", at = @At("HEAD"))
     private void capturePos(GuiGraphics g, int x, int y, CallbackInfo ci) {
@@ -49,7 +58,6 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
 
     @Inject(method = "mouseClicked", at = @At("RETURN"))
     private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
-        AdvancementWaypoints.LOGGER.info("123123123213");
         if (btn != 0 || selectedTab == null) return;
 
         AdvancementTabAccessor tab = (AdvancementTabAccessor) selectedTab;
@@ -60,7 +68,7 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
         int sx = Mth.floor(tab.getScrollX());
         int sy = Mth.floor(tab.getScrollY());
 
-        for (AdvancementWidget w : tab.getWidgets().values()) {
+        for (Object w : tab.getWidgets().values()) {
             AdvancementWidgetAccessor wa = (AdvancementWidgetAccessor) w;
             if (wa.invokeIsMouseOver(sx, sy, relX, relY)) {
                 AdvancementNode node = wa.getAdvancementNode();
@@ -68,21 +76,21 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
                     ResourceLocation id = node.holder().id();
                     if (selectMode) {
                         selectCallback.accept(id);
-                        minecraft.setScreen(screenToOpen != null ? screenToOpen : lastScreen);
+                        Screen target = screenToOpen != null ? screenToOpen : (parentScreen != null ? parentScreen : lastScreen);
+                        minecraft.setScreen(target);
                     } else {
                         Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
                         Navigator nav = Navigator.getInstance();
-                        if(nav.getCurrentId() != id) {
+                        if (nav.getCurrentId() != id && targets!=null) {
                             nav.setCurrentId(id);
                             nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
                             nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
                             nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
-                        }
-                        else{
+                        } else {
                             nav.clearAll();
                             nav.setCurrentId(null);
                         }
-                        Minecraft.getInstance().setScreen(null);
+                        if(targets!=null) Minecraft.getInstance().setScreen(null);
                     }
                 });
                 break;
@@ -102,8 +110,14 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
     }
 
     @Override
+    public void advWaypoint_setParentScreen(Screen screen) {
+        parentScreen = screen;
+    }
+
+    @Override
     public void onClose() {
         selectMode = false;
-        minecraft.setScreen(lastScreen);
+        Screen target = parentScreen != null ? parentScreen : lastScreen;
+        minecraft.setScreen(target);
     }
 }
