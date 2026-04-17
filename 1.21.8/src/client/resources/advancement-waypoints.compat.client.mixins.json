@@ -2,6 +2,7 @@
 	"required": false,
 	"package": "com.listraind.advancementwaypoints.mixin.compat",
 	"compatibilityLevel": "JAVA_21",
+	"plugin": "com.listraind.advancementwaypoints.mixin.compat.BetterAdvancementsMixinPlugin",
 	"client": [
 		"BetterAdvancementsScreenMixin",
 		"BetterAdvancementTabAccessor",

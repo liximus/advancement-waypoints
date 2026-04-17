@@ -25,10 +25,10 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
         Navigator.getInstance().initHud();
 
         KeyMapping openKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.advancementwaypoints.open",
+                "открыть менюa",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_J,
-                "Навигация по достижениям"
+                "Advancement Waypoints"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

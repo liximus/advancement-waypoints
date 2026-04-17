@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import betteradvancements.common.gui.BetterAdvancementTab;
 
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-@Mixin(targets = "betteradvancements.common.gui.BetterAdvancementsScreen", remap = false)
+@Mixin(targets = "betteradvancements.common.gui.BetterAdvancementsScreen")
 public abstract class BetterAdvancementsScreenMixin extends Screen implements IAdvancementScreenCustom {
 
     @Shadow(remap = false)
@@ -51,9 +52,17 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
         super(component);
     }
 
-    @Inject(method = "mouseClicked", at = @At("RETURN"), remap = false)
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void onInit(CallbackInfo ci) {
+        System.out.println("BetterAdvancementsScreenMixin applied");
+    }
+
+
+    @Inject(method = "mouseClicked(DDI)Z", at = @At("RETURN"))
     private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
         if (btn != 0 || selectedTab == null) return;
+
+        System.out.println("mouseClicked in BetterAdvancementsScreen");
 
         BetterAdvancementTabAccessor tab = (BetterAdvancementTabAccessor) selectedTab;
 
