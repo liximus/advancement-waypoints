@@ -47,17 +47,34 @@ public class Navigator {
 
     @Nullable
     public BlockPos getNearest(Dimension dim, BlockPos from) {
+        if (from == null) return null;
         List<BlockPos> list = targets.get(dim);
         if (list == null || list.isEmpty()) return null;
         if (list.size() == 1) return list.get(0);
         BlockPos nearest = null;
-        double min = Double.MAX_VALUE;
+        long min = Long.MAX_VALUE;
         for (BlockPos p : list) {
-            double d = p.distSqr(from);
-            if (d < min) { min = d; nearest = p; }
+            if (p == null) continue;
+            long dx = (long) p.getX() - from.getX();
+            long dz = (long) p.getZ() - from.getZ();
+            long distSq = dx*dx + dz*dz;
+            if (distSq < min) {
+                min = distSq;
+                nearest = p;
+            } else if (distSq == min) {
+                if (nearest == null) {
+                    nearest = p;
+                } else {
+                    if (p.getX() < nearest.getX() ||
+                        (p.getX() == nearest.getX() && (p.getZ() < nearest.getZ() ||
+                        (p.getZ() == nearest.getZ() && p.getY() < nearest.getY())))) {
+                        nearest = p;
+                    }
+                }
+            }
         }
         return nearest;
-    }
+    } 
 
     public boolean hasAnyTarget() { return !targets.isEmpty(); }
     public void clearAll() { targets.clear(); }

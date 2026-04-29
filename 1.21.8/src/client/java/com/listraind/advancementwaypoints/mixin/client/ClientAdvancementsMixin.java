@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.listraind.advancementwaypoints.advancement.AdvancementInjector;
 import com.listraind.advancementwaypoints.advancement.WaypointData;
 import com.listraind.advancementwaypoints.api.IAdvancementInjector;
+import com.listraind.advancementwaypoints.compat.IBetterAdvancementsScreen;
 import com.listraind.advancementwaypoints.config.ConfigIO;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
 import net.minecraft.advancements.*;
@@ -149,9 +150,19 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
     @Unique
     private void refreshUI() {
         if (listener == null) return;
-        for (ResourceLocation id : injected) {
-            AdvancementNode n = tree.get(id);
-            if (n != null) listener.onUpdateAdvancementProgress(n, progress.get(n.holder()));
+
+        if (listener instanceof IBetterAdvancementsScreen screen) {
+            screen.advWp_recalculateAll();
+        }
+
+        for (AdvancementNode n : tree.nodes()) {
+            AdvancementProgress p = progress.get(n.holder());
+            if (p == null) {
+                p = new AdvancementProgress();
+                p.update(n.advancement().requirements());
+            }
+            listener.onUpdateAdvancementProgress(n, p);
         }
     }
+
 }

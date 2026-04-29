@@ -23,9 +23,11 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         Navigator.getInstance().initHud();
+        // Debug: indicate client-side init
+        if (AdvancementWaypoints.LOGGER != null) AdvancementWaypoints.LOGGER.info("Advancement Waypoints client initialized");
 
         KeyMapping openKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "открыть менюa",
+                "открыть меню",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_J,
                 "Advancement Waypoints"
@@ -33,18 +35,16 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openKey.consumeClick()) {
-                client.setScreen(new MainMenuScreen());
+                client.execute(() -> {
+                    client.setScreen(new MainMenuScreen());
+                });
+                if (AdvancementWaypoints.LOGGER != null) AdvancementWaypoints.LOGGER.info("Opened MainMenuScreen via keybind");
             }
         });
 
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) ->
-                dispatcher.register(ClientCommandManager.literal("advwaypoints").executes(ctx -> {
-                    Minecraft.getInstance().execute(() -> {
-                        Minecraft.getInstance().setScreen(new MainMenuScreen());
-                    });
-                    return 1;
-                }))
-        );
+        Commands.initialize();
+
+
 
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES)
                 .registerReloadListener(new SimpleSynchronousResourceReloadListener() {

@@ -32,6 +32,26 @@ public class ConfigIO {
         return result;
     }
 
+    public static List<JsonObject> readAllInFolder(Path folder) {
+        List<JsonObject> result = new ArrayList<>();
+        if (!Files.exists(folder) || !Files.isDirectory(folder)) return result;
+        try (var stream = Files.list(folder)) {
+            stream.filter(p -> p.toString().endsWith(".json"))
+                  .sorted()
+                  .forEach(p -> {
+                      try {
+                          JsonArray arr = JsonParser.parseString(Files.readString(p, StandardCharsets.UTF_8)).getAsJsonArray();
+                          for (JsonElement el : arr) result.add(el.getAsJsonObject());
+                      } catch (Exception e) {
+                          AdvancementWaypoints.LOGGER.error("Read error: {}", p, e);
+                      }
+                  });
+        } catch (Exception e) {
+            AdvancementWaypoints.LOGGER.error("Read folder error: {}", folder, e);
+        }
+        return result;
+    }
+
     public static void writeArray(Path path, List<JsonObject> list) {
         try {
             Files.createDirectories(path.getParent());

@@ -1,25 +1,24 @@
 package com.listraind.advancementwaypoints.mixin.compat;
 
+import betteradvancements.common.advancements.BetterDisplayInfo;
 import betteradvancements.common.gui.BetterAdvancementWidget;
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
+import com.listraind.advancementwaypoints.compat.IBetterAdvancementWidget;
 import com.listraind.advancementwaypoints.navigator.Navigator;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import java.util.function.Function;
-
 @Mixin(value = BetterAdvancementWidget.class, remap = false)
-public class BetterAdvancementWidgetMixin {
+public class BetterAdvancementWidgetMixin implements IBetterAdvancementWidget {
 
     @Shadow(remap = false)
     private AdvancementNode advancementNode;
@@ -83,5 +82,19 @@ public class BetterAdvancementWidgetMixin {
         }
 
         guiGraphics.blitSprite(pipeline, finalSprite, x, y, width, height, color);
+    }
+
+    @Shadow public int x;
+    @Shadow public int y;
+    @Shadow private BetterDisplayInfo betterDisplayInfo;
+
+    @Override
+    public void advWp_updatePosition() {
+        this.x = this.betterDisplayInfo.getPosX() != null
+                ? this.betterDisplayInfo.getPosX()
+                : Mth.floor(this.displayInfo.getX() * 32.0F);
+        this.y = this.betterDisplayInfo.getPosY() != null
+                ? this.betterDisplayInfo.getPosY()
+                : Mth.floor(this.displayInfo.getY() * 27.0F);
     }
 }

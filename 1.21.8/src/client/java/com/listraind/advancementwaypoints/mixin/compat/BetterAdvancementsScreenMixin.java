@@ -4,6 +4,8 @@ import betteradvancements.common.gui.BetterAdvancementWidget;
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.advancement.CoordParser;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
+import com.listraind.advancementwaypoints.compat.IBetterAdvancementTab;
+import com.listraind.advancementwaypoints.compat.IBetterAdvancementsScreen;
 import com.listraind.advancementwaypoints.navigator.Navigator;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.client.Minecraft;
@@ -11,6 +13,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,7 +27,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 @Mixin(targets = "betteradvancements.common.gui.BetterAdvancementsScreen")
-public abstract class BetterAdvancementsScreenMixin extends Screen implements IAdvancementScreenCustom {
+public abstract class BetterAdvancementsScreenMixin extends Screen implements IAdvancementScreenCustom, IBetterAdvancementsScreen {
 
     @Shadow(remap = false)
     private BetterAdvancementTab selectedTab;
@@ -60,7 +64,7 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
 
     @Inject(method = "mouseClicked(DDI)Z", at = @At("RETURN"))
     private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
-        if (btn != 0 || selectedTab == null) return;
+        if (selectedTab == null) return;
 
         System.out.println("mouseClicked in BetterAdvancementsScreen");
 
@@ -101,22 +105,37 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
                     AdvancementHolder holder = entry.getKey();
                     holder.value().display().ifPresent(d -> {
                         ResourceLocation id = holder.id();
-                        if (selectMode) {
-                            selectCallback.accept(id);
-                            minecraft.setScreen(screenToOpen != null ? screenToOpen : parentScreen);
-                        } else {
-                            Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
-                            Navigator nav = Navigator.getInstance();
-                            if (nav.getCurrentId() != id && targets!=null) {
-                                nav.setCurrentId(id);
-                                nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
-                                nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
-                                nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
+                        if(btn==0) {
+                            if (selectMode) {
+                                selectCallback.accept(id);
+                                Screen target = screenToOpen != null ? screenToOpen : (parentScreen != null ? parentScreen : parentScreen);
+                                minecraft.setScreen(target);
                             } else {
-                                nav.clearAll();
-                                nav.setCurrentId(null);
+                                Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
+                                Navigator nav = Navigator.getInstance();
+                                if (nav.getCurrentId() != id && targets != null) {
+                                    nav.setCurrentId(id);
+                                    nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
+                                    nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
+                                    nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
+                                } else {
+                                    nav.clearAll();
+                                    nav.setCurrentId(null);
+                                }
+                                if (targets != null) Minecraft.getInstance().setScreen(null);
                             }
-                            if(targets!=null) Minecraft.getInstance().setScreen(null);
+                        }else if(btn==2) {
+                            Player player = Minecraft.getInstance().player;
+                            if (player == null) return;
+                            Navigator.Dimension dim = Navigator.Dimension.from(player.level().dimension());
+                            if (dim == null) return;
+                            List<BlockPos> targets = CoordParser.parseForNavigation(d.getDescription().getString()).get(dim);
+                            if(targets == null) return;
+                            BlockPos target = getNearest(targets,player.blockPosition());
+                            if(target == null) return;
+                            String command = "tp" + " " + target.getX() + " " + target.getY() + " " + target.getZ();
+                            Minecraft.getInstance().player.connection.sendCommand(command);
+                            Minecraft.getInstance().setScreen(null);
                         }
                     });
                     break;
@@ -147,5 +166,47 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
     public void onClose() {
         selectMode = false;
         minecraft.setScreen(parentScreen);
+    }
+
+    @Unique
+    @Nullable
+    public BlockPos getNearest(List<BlockPos> list, BlockPos from) {
+        if (from == null) return null;
+        if (list == null || list.isEmpty()) return null;
+        if (list.size() == 1) return list.get(0);
+        BlockPos nearest = null;
+        long min = Long.MAX_VALUE;
+        for (BlockPos p : list) {
+            if (p == null) continue;
+            long dx = (long) p.getX() - from.getX();
+            long dz = (long) p.getZ() - from.getZ();
+            long distSq = dx*dx + dz*dz;
+            if (distSq < min) {
+                min = distSq;
+                nearest = p;
+            } else if (distSq == min) {
+                if (nearest == null) {
+                    nearest = p;
+                } else {
+                    if (p.getX() < nearest.getX() ||
+                            (p.getX() == nearest.getX() && (p.getZ() < nearest.getZ() ||
+                                    (p.getZ() == nearest.getZ() && p.getY() < nearest.getY())))) {
+                        nearest = p;
+                    }
+                }
+            }
+        }
+        return nearest;
+    }
+
+    @Shadow private Map<AdvancementHolder, BetterAdvancementTab> tabs;
+
+    @Override
+    public void advWp_recalculateAll() {
+        for (BetterAdvancementTab tab : tabs.values()) {
+            if (tab instanceof IBetterAdvancementTab iTab) {
+                iTab.advWp_recalculate();
+            }
+        }
     }
 }

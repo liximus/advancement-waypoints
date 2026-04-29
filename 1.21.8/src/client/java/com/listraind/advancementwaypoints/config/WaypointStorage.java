@@ -7,27 +7,43 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 public class WaypointStorage {
 
     private static ResourceLocation lastParent = null;
 
-    private static Path waypointsPath() {
-        return ConfigIO.worldDir().resolve("custom_advancements.json");
+    private static Path waypointsFolder() {
+        return ConfigIO.worldDir().resolve("custom_advancements");
+    }
+
+    private static Path mainFile() {
+        return waypointsFolder().resolve("custom_advancements.json");
     }
 
     private static Path overridesPath() {
         return ConfigIO.worldDir().resolve("overrides.json");
     }
 
-    public static List<JsonObject> loadWaypoints() {
-        return ConfigIO.readArray(waypointsPath());
+    private static Path findFileContaining(String id) {
+        if (!Files.exists(waypointsFolder())) return null;
+        try (var stream = Files.list(waypointsFolder())) {
+            return stream.filter(p -> p.toString().endsWith(".json"))
+                    .filter(p -> {
+                        List<JsonObject> contents = ConfigIO.readArray(p);
+                        return contents.stream().anyMatch(o -> id.equals(ConfigIO.str(o, "id", "")));
+                    })
+                    .findFirst().orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
-    public static void saveWaypoints(List<JsonObject> list) {
-        ConfigIO.writeArray(waypointsPath(), list);
+    public static List<JsonObject> loadWaypoints() {
+        return ConfigIO.readAllInFolder(waypointsFolder());
     }
 
     public static List<JsonObject> loadOverrides() {
@@ -39,11 +55,15 @@ public class WaypointStorage {
     }
 
     public static void saveOrUpdateWaypoint(JsonObject data) {
-        List<JsonObject> all = loadWaypoints();
         String id = data.get("id").getAsString();
 
+        Path file = findFileContaining(id);
+        if (file == null) file = mainFile();
+
+        List<JsonObject> fileContents = Files.exists(file) ? ConfigIO.readArray(file) : new ArrayList<>();
+
         JsonObject existing = null;
-        for (JsonObject o : all) {
+        for (JsonObject o : fileContents) {
             if (id.equals(ConfigIO.str(o, "id", ""))) {
                 existing = o;
                 break;
@@ -51,21 +71,28 @@ public class WaypointStorage {
         }
 
         if (existing != null) {
-            for (var entry : data.entrySet()) {
-                existing.add(entry.getKey(), entry.getValue());
-            }
+            for (var entry : data.entrySet()) existing.add(entry.getKey(), entry.getValue());
         } else {
-            all.add(data);
+            fileContents.add(data);
         }
 
-        saveWaypoints(all);
+        ConfigIO.writeArray(file, fileContents);
         AdvancementWaypointsClient.reloadAdvancements();
     }
 
     public static void deleteWaypoint(String id) {
-        List<JsonObject> all = loadWaypoints();
-        all.removeIf(o -> id.equals(ConfigIO.str(o, "id", "")));
-        saveWaypoints(all);
+        Path file = findFileContaining(id);
+        if (file == null) return;
+
+        List<JsonObject> fileContents = ConfigIO.readArray(file);
+        fileContents.removeIf(o -> id.equals(ConfigIO.str(o, "id", "")));
+
+        if (fileContents.isEmpty()) {
+            try { Files.deleteIfExists(file); } catch (Exception ignored) {}
+        } else {
+            ConfigIO.writeArray(file, fileContents);
+        }
+
         AdvancementWaypointsClient.reloadAdvancements();
     }
 
