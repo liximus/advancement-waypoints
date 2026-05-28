@@ -50,7 +50,7 @@ public class DimensionPickerScreen extends Screen {
     public void render(GuiGraphics g, int mx, int my, float d) {
         g.blit(RenderPipelines.GUI_TEXTURED, BG, panelX, panelY + 20, 0f, 0f, panelW, panelH, panelW, panelH);
         super.render(g, mx, my, d);
-        g.drawCenteredString(font, title, width / 2, height / 2 - 60, 0xFFFFFF);
+        g.drawCenteredString(font, title, panelX + panelW / 2, panelY + 26, 0xFFFFFF);
     }
 
     @Override

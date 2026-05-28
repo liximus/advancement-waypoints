@@ -9,8 +9,14 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class WaypointStorage {
 
@@ -30,16 +36,20 @@ public class WaypointStorage {
 
     private static Path findFileContaining(String id) {
         if (!Files.exists(waypointsFolder())) return null;
+        List<Path> jsonFiles;
         try (var stream = Files.list(waypointsFolder())) {
-            return stream.filter(p -> p.toString().endsWith(".json"))
-                    .filter(p -> {
-                        List<JsonObject> contents = ConfigIO.readArray(p);
-                        return contents.stream().anyMatch(o -> id.equals(ConfigIO.str(o, "id", "")));
-                    })
-                    .findFirst().orElse(null);
+            jsonFiles = stream.filter(p -> p.toString().endsWith(".json"))
+                    .collect(java.util.stream.Collectors.toList());
         } catch (Exception e) {
             return null;
         }
+        for (Path p : jsonFiles) {
+            List<JsonObject> contents = ConfigIO.readArray(p);
+            if (contents.stream().anyMatch(o -> id.equals(ConfigIO.str(o, "id", "")))) {
+                return p;
+            }
+        }
+        return null;
     }
 
     public static List<JsonObject> loadWaypoints() {
@@ -55,7 +65,8 @@ public class WaypointStorage {
     }
 
     public static void saveOrUpdateWaypoint(JsonObject data) {
-        String id = data.get("id").getAsString();
+        String id = ConfigIO.str(data, "id", "");
+        if (id.isEmpty()) return;
 
         Path file = findFileContaining(id);
         if (file == null) file = mainFile();
@@ -81,19 +92,52 @@ public class WaypointStorage {
     }
 
     public static void deleteWaypoint(String id) {
-        Path file = findFileContaining(id);
-        if (file == null) return;
+        Set<String> toDelete = collectDescendants(id);
+        toDelete.add(id);
 
-        List<JsonObject> fileContents = ConfigIO.readArray(file);
-        fileContents.removeIf(o -> id.equals(ConfigIO.str(o, "id", "")));
+        Set<Path> touchedFiles = new HashSet<>();
+        for (String victimId : toDelete) {
+            Path file = findFileContaining(victimId);
+            if (file != null) touchedFiles.add(file);
+        }
 
-        if (fileContents.isEmpty()) {
-            try { Files.deleteIfExists(file); } catch (Exception ignored) {}
-        } else {
-            ConfigIO.writeArray(file, fileContents);
+        for (Path file : touchedFiles) {
+            List<JsonObject> fileContents = ConfigIO.readArray(file);
+            fileContents.removeIf(o -> toDelete.contains(ConfigIO.str(o, "id", "")));
+
+            if (fileContents.isEmpty()) {
+                try { Files.deleteIfExists(file); } catch (Exception ignored) {}
+            } else {
+                ConfigIO.writeArray(file, fileContents);
+            }
         }
 
         AdvancementWaypointsClient.reloadAdvancements();
+    }
+
+    private static Set<String> collectDescendants(String rootId) {
+        List<JsonObject> all = loadWaypoints();
+        Map<String, List<String>> childrenByParent = new HashMap<>();
+        for (JsonObject o : all) {
+            String parent = ConfigIO.nullable(o, "parent");
+            if (parent == null || parent.isEmpty()) continue;
+            String childId = ConfigIO.str(o, "id", "");
+            if (childId.isEmpty()) continue;
+            childrenByParent.computeIfAbsent(parent, k -> new ArrayList<>()).add(childId);
+        }
+
+        Set<String> descendants = new HashSet<>();
+        Deque<String> queue = new ArrayDeque<>();
+        queue.add(rootId);
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            List<String> children = childrenByParent.get(current);
+            if (children == null) continue;
+            for (String child : children) {
+                if (descendants.add(child)) queue.add(child);
+            }
+        }
+        return descendants;
     }
 
     public static JsonObject getWaypointOrVanilla(ResourceLocation id) {
@@ -123,7 +167,8 @@ public class WaypointStorage {
 
     public static void saveOverride(JsonObject data) {
         List<JsonObject> overrides = loadOverrides();
-        String id = data.get("id").getAsString();
+        String id = ConfigIO.str(data, "id", "");
+        if (id.isEmpty()) return;
 
         JsonObject existing = null;
         for (JsonObject o : overrides) {

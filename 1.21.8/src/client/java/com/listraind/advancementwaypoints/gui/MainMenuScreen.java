@@ -17,7 +17,12 @@ public class MainMenuScreen extends Screen {
     protected static ResourceLocation BG = DarkModeChecker.isDarkModeEnabled() ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png") ;
     private static final int W = 200, H = 90;
 
+
     public MainMenuScreen() {
+        super(Component.literal("§8Меню вейпоинтов"));
+    }
+
+    public MainMenuScreen(Screen parent) {
         super(Component.literal("§8Меню вейпоинтов"));
     }
 
@@ -37,6 +42,7 @@ public class MainMenuScreen extends Screen {
         ).bounds(bx, cy + 25, bw, 20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Редактировать"), b -> {
+            if (minecraft == null || minecraft.player == null || minecraft.player.connection == null) return;
             minecraft.setScreen(new AdvancementsScreen(minecraft.player.connection.getAdvancements(), this));
 
             if (minecraft.screen instanceof IAdvancementScreenCustom customScreen) {
@@ -56,5 +62,10 @@ public class MainMenuScreen extends Screen {
         g.blit(RenderPipelines.GUI_TEXTURED, BG, cx, cy, 0, 0, W, H, W, H);
         super.render(g, mx, my, d);
         g.drawString(font, title, width / 2 - font.width(title) / 2, cy + 10, 0xFF222222, false);
+    }
+
+    @Override
+    public void onClose() {
+        if (minecraft != null) minecraft.setScreen(null);
     }
 }

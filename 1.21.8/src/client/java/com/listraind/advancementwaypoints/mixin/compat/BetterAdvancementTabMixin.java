@@ -20,27 +20,36 @@ public abstract class BetterAdvancementTabMixin implements IBetterAdvancementTab
 
     @Override
     public void advWp_recalculate() {
+        if (widgets == null || widgets.isEmpty()) return;
+
         for (BetterAdvancementWidget w : widgets.values()) {
             if (w instanceof IBetterAdvancementWidget iw) {
                 iw.advWp_updatePosition();
             }
         }
 
-        this.minX = Integer.MAX_VALUE;
-        this.maxX = Integer.MIN_VALUE;
-        this.minY = Integer.MAX_VALUE;
-        this.maxY = Integer.MIN_VALUE;
+        int newMinX = Integer.MAX_VALUE;
+        int newMaxX = Integer.MIN_VALUE;
+        int newMinY = Integer.MAX_VALUE;
+        int newMaxY = Integer.MIN_VALUE;
 
         for (BetterAdvancementWidget w : widgets.values()) {
             int left = w.getX();
             int right = left + 28;
             int top = w.getY();
             int bottom = top + 27;
-            this.minX = Math.min(this.minX, left);
-            this.maxX = Math.max(this.maxX, right);
-            this.minY = Math.min(this.minY, top);
-            this.maxY = Math.max(this.maxY, bottom);
+            newMinX = Math.min(newMinX, left);
+            newMaxX = Math.max(newMaxX, right);
+            newMinY = Math.min(newMinY, top);
+            newMaxY = Math.max(newMaxY, bottom);
         }
+
+        if (newMinX == Integer.MAX_VALUE) return;
+
+        this.minX = newMinX;
+        this.maxX = newMaxX;
+        this.minY = newMinY;
+        this.maxY = newMaxY;
 
         this.centered = false;
     }

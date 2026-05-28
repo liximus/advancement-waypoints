@@ -6,15 +6,18 @@ import com.listraind.advancementwaypoints.advancement.CoordParser;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
 import com.listraind.advancementwaypoints.compat.IBetterAdvancementTab;
 import com.listraind.advancementwaypoints.compat.IBetterAdvancementsScreen;
+import com.listraind.advancementwaypoints.gui.MainMenuScreen;
 import com.listraind.advancementwaypoints.navigator.Navigator;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -51,22 +54,73 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
     private Screen screenToOpen;
     @Unique
     private java.lang.reflect.Method cachedIsMouseOverMethod;
+    @Unique
+    protected Button modButton;
+    @Unique
+    private double pressMx, pressMy;
+    @Unique
+    private int pressBtn = -1;
+    @Unique
+    private static final double DRAG_THRESHOLD = 4.0;
 
     protected BetterAdvancementsScreenMixin(Component component) {
         super(component);
     }
 
-    @Inject(method = "<init>", at = @At("RETURN"))
+    @Inject(method = "init", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
-        System.out.println("BetterAdvancementsScreenMixin applied");
+
+        int panelLeft   = (this.width - this.internalWidth) / 2 + 30;
+        int panelTop    = (this.height - this.internalHeight) / 2 + 40;
+        int panelRight  = panelLeft + this.internalWidth - 70;
+
+        int btnW = 26, btnH = 26;
+        int gap = 5;
+
+        int btnY = panelTop + 20;
+
+        int btnX = panelRight - btnW - gap;
+
+
+        btnX = Math.max(2, Math.min(btnX, this.width - btnW - 2));
+        btnY = Math.max(2, Math.min(btnY, this.height - btnH - 2));
+
+        modButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+            setFocused(null);
+            minecraft.setScreen(new MainMenuScreen(this));
+        }).bounds(btnX, btnY, btnW, btnH)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Меню ваеёпоинтов")))
+                .build());
+    }
+
+    @Inject(method = "render", at = @At("RETURN"))
+    private void onRender(GuiGraphics g, int mx, int my, float pt, CallbackInfo ci) {
+        super.render(g, mx, my, pt);
+        if (modButton != null) {
+            int ix = modButton.getX() + (modButton.getWidth() - 20) / 2;
+            int iy = modButton.getY() + (modButton.getHeight() - 20) / 2;
+            g.blit(RenderPipelines.GUI_TEXTURED, ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/logo.png"), ix, iy, 0f, 0f, 20, 20, 20, 20);
+        }
     }
 
 
-    @Inject(method = "mouseClicked(DDI)Z", at = @At("RETURN"))
-    private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
-        if (selectedTab == null) return;
+    @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"))
+    private void onPress(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
+        pressMx = mx;
+        pressMy = my;
+        pressBtn = btn;
+    }
 
-        System.out.println("mouseClicked in BetterAdvancementsScreen");
+    @Inject(method = "mouseReleased(DDI)Z", at = @At("RETURN"))
+    private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
+        int storedBtn = pressBtn;
+        double dxPress = mx - pressMx;
+        double dyPress = my - pressMy;
+        pressBtn = -1;
+        if (storedBtn != btn) return;
+        if (dxPress*dxPress + dyPress*dyPress > DRAG_THRESHOLD * DRAG_THRESHOLD) return;
+        if (selectedTab == null) return;
+        if (Boolean.TRUE.equals(cir.getReturnValue())) return;
 
         BetterAdvancementTabAccessor tab = (BetterAdvancementTabAccessor) selectedTab;
 
@@ -113,7 +167,7 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
                             } else {
                                 Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
                                 Navigator nav = Navigator.getInstance();
-                                if (nav.getCurrentId() != id && targets != null) {
+                                if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
                                     nav.setCurrentId(id);
                                     nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
                                     nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
@@ -124,14 +178,16 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
                                 }
                                 if (targets != null) Minecraft.getInstance().setScreen(null);
                             }
-                        }else if(btn==2) {
+                        }else if(btn==1) {
                             Player player = Minecraft.getInstance().player;
                             if (player == null) return;
                             Navigator.Dimension dim = Navigator.Dimension.from(player.level().dimension());
                             if (dim == null) return;
-                            List<BlockPos> targets = CoordParser.parseForNavigation(d.getDescription().getString()).get(dim);
+                            Map<Navigator.Dimension, List<BlockPos>> parsed = CoordParser.parseForNavigation(d.getDescription().getString());
+                            if (parsed == null) return;
+                            List<BlockPos> targets = parsed.get(dim);
                             if(targets == null) return;
-                            BlockPos target = getNearest(targets,player.blockPosition());
+                            BlockPos target = Navigator.nearestOf(targets, player.blockPosition());
                             if(target == null) return;
                             String command = "tp" + " " + target.getX() + " " + target.getY() + " " + target.getZ();
                             Minecraft.getInstance().player.connection.sendCommand(command);
@@ -166,37 +222,6 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
     public void onClose() {
         selectMode = false;
         minecraft.setScreen(parentScreen);
-    }
-
-    @Unique
-    @Nullable
-    public BlockPos getNearest(List<BlockPos> list, BlockPos from) {
-        if (from == null) return null;
-        if (list == null || list.isEmpty()) return null;
-        if (list.size() == 1) return list.get(0);
-        BlockPos nearest = null;
-        long min = Long.MAX_VALUE;
-        for (BlockPos p : list) {
-            if (p == null) continue;
-            long dx = (long) p.getX() - from.getX();
-            long dz = (long) p.getZ() - from.getZ();
-            long distSq = dx*dx + dz*dz;
-            if (distSq < min) {
-                min = distSq;
-                nearest = p;
-            } else if (distSq == min) {
-                if (nearest == null) {
-                    nearest = p;
-                } else {
-                    if (p.getX() < nearest.getX() ||
-                            (p.getX() == nearest.getX() && (p.getZ() < nearest.getZ() ||
-                                    (p.getZ() == nearest.getZ() && p.getY() < nearest.getY())))) {
-                        nearest = p;
-                    }
-                }
-            }
-        }
-        return nearest;
     }
 
     @Shadow private Map<AdvancementHolder, BetterAdvancementTab> tabs;

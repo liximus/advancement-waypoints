@@ -39,6 +39,7 @@ public class CoordParser {
 
     @Nullable
     public static Map<Navigator.Dimension, List<BlockPos>> parseForNavigation(String text) {
+        if (text == null || text.isEmpty()) return null;
         Map<Navigator.Dimension, List<BlockPos>> result = new EnumMap<>(Navigator.Dimension.class);
         for (Navigator.Dimension dim : Navigator.Dimension.values()) result.put(dim, new ArrayList<>());
 
@@ -124,6 +125,7 @@ public class CoordParser {
     }
 
     private static int dimIndex(String name) {
+        if (name == null) return -1;
         return switch (name.toLowerCase()) {
             case "верхний мир" -> 0;
             case "крыша ада" -> 1;

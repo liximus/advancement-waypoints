@@ -20,7 +20,7 @@ public class EditWaypointScreen extends WaypointFormScreen {
     public EditWaypointScreen(JsonObject data) {
         super(Component.literal("§8Редактирование вейпоинта"));
         this.originalId = ConfigIO.str(data, "id", "");
-        this.isVanilla = !originalId.contains("advwaypoints");
+        this.isVanilla = !originalId.startsWith("advwaypoints:");
 
         savedName = ConfigIO.str(data, "title", "").replace('§', '&');
         savedBackground = ConfigIO.nullable(data, "background");
@@ -61,7 +61,7 @@ public class EditWaypointScreen extends WaypointFormScreen {
     @Override
     protected void initActions(int cx, int y) {
         if (isVanilla) {
-            addRenderableWidget(Button.builder(Component.literal("§7Только просмотр"), b -> {}).bounds(cx - 105, y, 210, BH).build());
+            addRenderableWidget(Button.builder(Component.literal("§7Только просмотр"), b -> {}).bounds(cx - 105, y, 210, BUTTON_HEIGHT).build());
             return;
         }
 
@@ -81,11 +81,11 @@ public class EditWaypointScreen extends WaypointFormScreen {
 
             WaypointStorage.saveOrUpdateWaypoint(entry);
             minecraft.setScreen(null);
-        }).bounds(cx - 105, y, 100, BH).build());
+        }).bounds(cx - 105, y, 100, BUTTON_HEIGHT).build());
 
         addRenderableWidget(Button.builder(Component.literal("§cУдалить"), b -> {
             WaypointStorage.deleteWaypoint(originalId);
             minecraft.setScreen(null);
-        }).bounds(cx + 5, y, 100, BH).build());
+        }).bounds(cx + 5, y, 100, BUTTON_HEIGHT).build());
     }
 }

@@ -5,8 +5,6 @@ import com.listraind.advancementwaypoints.gui.MainMenuScreen;
 import com.listraind.advancementwaypoints.navigator.Navigator;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -33,12 +31,24 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
                 "Advancement Waypoints"
         ));
 
+        KeyMapping clearNavKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "очистить навигатор",
+                InputConstants.Type.KEYSYM,
+                InputConstants.UNKNOWN.getValue(),
+                "Advancement Waypoints"
+        ));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openKey.consumeClick()) {
                 client.execute(() -> {
                     client.setScreen(new MainMenuScreen());
                 });
                 if (AdvancementWaypoints.LOGGER != null) AdvancementWaypoints.LOGGER.info("Opened MainMenuScreen via keybind");
+            }
+            while (clearNavKey.consumeClick()) {
+                Navigator nav = Navigator.getInstance();
+                nav.clearAll();
+                nav.setCurrentId(null);
             }
         });
 

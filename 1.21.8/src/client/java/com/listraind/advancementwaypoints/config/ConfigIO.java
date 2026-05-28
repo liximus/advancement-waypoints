@@ -15,16 +15,27 @@ public class ConfigIO {
 
     private static final Path BASE = Path.of("config", "advancement_waypoints");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    public static final int FORMAT_VERSION = 1;
 
     public static Path worldDir() {
         return BASE.resolve("worlds").resolve(worldHash());
+    }
+
+    private static JsonArray parseEntriesArray(String raw) {
+        JsonElement el = JsonParser.parseString(raw);
+        if (el.isJsonArray()) return el.getAsJsonArray();
+        if (el.isJsonObject()) {
+            JsonObject root = el.getAsJsonObject();
+            if (root.has("entries") && root.get("entries").isJsonArray()) return root.getAsJsonArray("entries");
+        }
+        return new JsonArray();
     }
 
     public static List<JsonObject> readArray(Path path) {
         List<JsonObject> result = new ArrayList<>();
         if (!Files.exists(path)) return result;
         try {
-            JsonArray arr = JsonParser.parseString(Files.readString(path, StandardCharsets.UTF_8)).getAsJsonArray();
+            JsonArray arr = parseEntriesArray(Files.readString(path, StandardCharsets.UTF_8));
             for (JsonElement el : arr) result.add(el.getAsJsonObject());
         } catch (Exception e) {
             AdvancementWaypoints.LOGGER.error("Read error: {}", path, e);
@@ -40,7 +51,7 @@ public class ConfigIO {
                   .sorted()
                   .forEach(p -> {
                       try {
-                          JsonArray arr = JsonParser.parseString(Files.readString(p, StandardCharsets.UTF_8)).getAsJsonArray();
+                          JsonArray arr = parseEntriesArray(Files.readString(p, StandardCharsets.UTF_8));
                           for (JsonElement el : arr) result.add(el.getAsJsonObject());
                       } catch (Exception e) {
                           AdvancementWaypoints.LOGGER.error("Read error: {}", p, e);
@@ -54,7 +65,8 @@ public class ConfigIO {
 
     public static void writeArray(Path path, List<JsonObject> list) {
         try {
-            Files.createDirectories(path.getParent());
+            Path parent = path.getParent();
+            if (parent != null) Files.createDirectories(parent);
             JsonArray arr = new JsonArray();
             for (JsonObject obj : list) {
                 JsonObject clean = obj.deepCopy();
@@ -62,7 +74,16 @@ public class ConfigIO {
                 clean.remove("y");
                 arr.add(clean);
             }
-            Files.writeString(path, GSON.toJson(arr), StandardCharsets.UTF_8);
+            JsonObject root = new JsonObject();
+            root.addProperty("version", FORMAT_VERSION);
+            root.add("entries", arr);
+            Path tmp = path.resolveSibling(path.getFileName().toString() + ".tmp");
+            Files.writeString(tmp, GSON.toJson(root), StandardCharsets.UTF_8);
+            try {
+                Files.move(tmp, path, java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ame) {
+                Files.move(tmp, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (Exception e) {
             AdvancementWaypoints.LOGGER.error("Write error: {}", path, e);
         }
@@ -79,14 +100,18 @@ public class ConfigIO {
     private static String worldHash() {
         Minecraft mc = Minecraft.getInstance();
         String raw;
-        if (mc.getCurrentServer() != null) raw = mc.getCurrentServer().ip;
-        else if (mc.getSingleplayerServer() != null)
-            raw = mc.getSingleplayerServer().getWorldPath(LevelResource.ROOT).toString();
-        else raw = "unknown";
+        if (mc.getCurrentServer() != null) {
+            var s = mc.getCurrentServer();
+            raw = "server:" + s.name + "|" + s.ip;
+        } else if (mc.getSingleplayerServer() != null) {
+            raw = "single:" + mc.getSingleplayerServer().getWorldPath(LevelResource.ROOT).toString();
+        } else {
+            raw = "unknown";
+        }
         try {
             byte[] d = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 8; i++) sb.append(String.format("%02x", d[i]));
+            for (int i = 0; i < 16; i++) sb.append(String.format("%02x", d[i]));
             return sb.toString();
         } catch (Exception e) {
             return String.valueOf(raw.hashCode());

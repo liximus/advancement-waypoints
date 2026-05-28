@@ -6,6 +6,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.Objects;
+
 public class CreateWaypointScreen extends WaypointFormScreen {
 
     private boolean initialized = false;
@@ -51,6 +53,15 @@ public class CreateWaypointScreen extends WaypointFormScreen {
         selectedParentId = newParent;
         hadParentBefore = true;
         minecraft.setScreen(new CreateWaypointScreen());
+        if (coordRows.isEmpty()) {
+            CoordRow cr = new CoordRow(currentDim());
+            if (minecraft != null && minecraft.player != null) {
+                cr.sx = String.valueOf((int) minecraft.player.getX());
+                cr.sy = String.valueOf((int) minecraft.player.getY());
+                cr.sz = String.valueOf((int) minecraft.player.getZ());
+            }
+            coordRows.add(cr);
+        }
     }
 
     @Override
@@ -70,11 +81,11 @@ public class CreateWaypointScreen extends WaypointFormScreen {
             entry.addProperty("description", desc);
             entry.addProperty("frame", "task");
             entry.addProperty("parent", selectedParentId != null ? selectedParentId.toString() : "");
-            if (bg != null) entry.addProperty("background", bg);
+            entry.addProperty("background", Objects.requireNonNullElse(bg, "stone"));
 
             WaypointStorage.saveOrUpdateWaypoint(entry);
             WaypointStorage.setLastParent(ResourceLocation.parse(id));
             minecraft.setScreen(null);
-        }).bounds(cx - 50, y, 100, BH).build());
+        }).bounds(cx - 50, y, 100, BUTTON_HEIGHT).build());
     }
 }

@@ -24,8 +24,8 @@ import java.util.List;
 
 public abstract class WaypointFormScreen extends Screen {
 
-    protected static ResourceLocation BG = DarkModeChecker.isDarkModeEnabled() ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png") ;
-    protected static final int FH = 18, BH = 20, CFW = 52, GAP = 4, FILL_W = 60;
+    protected static ResourceLocation BG = DarkModeChecker.isDarkModeEnabled() ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
+    protected static final int FIELD_HEIGHT = 18, BUTTON_HEIGHT = 20, COORD_FIELD_WIDTH = 52, GAP = 4, FILL_BUTTON_WIDTH = 60;
 
     protected Item selectedIcon = Items.GRASS_BLOCK;
     protected ResourceLocation selectedParentId;
@@ -39,8 +39,8 @@ public abstract class WaypointFormScreen extends Screen {
     protected EditBox nameField, descField;
     protected Button iconButton, parentButton, bgButton;
     protected float scale = 1f;
-    protected int vw, vh, px, py, pw, ph;
-    protected int sep1Y, sep2Y;
+    protected int virtualWidth, virtualHeight, panelX, panelY, panelWidth, panelHeight;
+    protected int separator1Y, separator2Y;
 
     public static void setDarkMode(boolean darkMode) {
         BG = darkMode ? ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackgrounddark.png") : ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/waypointscreenbackground.png");
@@ -64,178 +64,177 @@ public abstract class WaypointFormScreen extends Screen {
 
     @Override
     protected void init() {
-        int pad = 12, gap = 4, rowH = 36, rowGap = 10;
+        int padding = 12, gap = 4, coordRowHeight = 36, coordRowGap = 10;
 
         boolean root = isRoot();
 
-        int ch = pad + 14 + gap + FH + gap + FH + gap + FH + gap;
-        if (root) ch += FH + gap;
-        ch += FH + 13;
-        if (!root && !coordRows.isEmpty()) ch += coordRows.size() * (rowH + rowGap);
-        if (!root) ch += BH + 13;
-        ch += BH + pad;
+        int totalContentHeight = padding + 14 + gap + FIELD_HEIGHT + gap + FIELD_HEIGHT + gap + FIELD_HEIGHT + gap;
+        if (root) totalContentHeight += FIELD_HEIGHT + gap;
+        totalContentHeight += FIELD_HEIGHT + 13;
+        if (!root && !coordRows.isEmpty()) totalContentHeight += coordRows.size() * (coordRowHeight + coordRowGap);
+        if (!root) totalContentHeight += BUTTON_HEIGHT + 13;
+        totalContentHeight += BUTTON_HEIGHT + padding;
 
-        scale = Math.min(1f, (float)(height - 10) / ch);
-        vw = (int)(width / scale);
-        vh = (int)(height / scale);
-        pw = Math.min(vw - 20, 340);
-        ph = ch;
-        px = (vw - pw) / 2;
-        py = (vh - ph) / 2;
+        scale = Math.min(1f, (float)(height - 10) / totalContentHeight);
+        virtualWidth = (int)(width / scale);
+        virtualHeight = (int)(height / scale);
+        panelWidth = Math.min(virtualWidth - 20, 340);
+        panelHeight = totalContentHeight;
+        panelX = (virtualWidth - panelWidth) / 2;
+        panelY = (virtualHeight - panelHeight) / 2;
 
-        int cx = px + pw / 2;
-        int fw = pw - 40;
-        int fl = cx - fw / 2;
-        int y = py + pad + 14 + gap;
+        int centerX = panelX + panelWidth / 2;
+        int fieldWidth = panelWidth - 40;
+        int fieldLeft = centerX - fieldWidth / 2;
+        int currentY = panelY + padding + 14 + gap;
 
-        nameField = addBox(fl, y, fw, "Название...", savedName);
-        y += FH + gap;
+        nameField = addBox(fieldLeft, currentY, fieldWidth, "Название...", savedName);
+        currentY += FIELD_HEIGHT + gap;
 
-        int bw = fw - 25;
+        int buttonWidth = fieldWidth - 25;
         iconButton = addRenderableWidget(Button.builder(Component.literal("Иконка: " + iconId()), b -> {
             saveState();
             setFocused(null);
             minecraft.setScreen(new ItemPickerScreen(this, item -> selectedIcon = item));
-        }).bounds(fl, y, bw, FH).build());
-        y += FH + gap;
+        }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
+        currentY += FIELD_HEIGHT + gap;
 
-        String pName = selectedParentId != null ? parentName() : "нет§3(вкладка)";
-        parentButton = addRenderableWidget(Button.builder(Component.literal("Parent: " + pName), b -> {
+        String parentDisplayName = selectedParentId != null ? parentName() : "нет§3(вкладка)";
+        parentButton = addRenderableWidget(Button.builder(Component.literal("Parent: " + parentDisplayName), b -> {
             saveState();
             setFocused(null);
             hadParentBefore = selectedParentId != null;
             openParentPicker();
-        }).bounds(fl, y, bw, FH).build());
+        }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
         parentButton.active = !isVanilla;
 
-        Button resetBtn = addRenderableWidget(Button.builder(Component.literal("X"), b -> {
+        Button resetParentButton = addRenderableWidget(Button.builder(Component.literal("X"), b -> {
             selectedParentId = null;
             parentButton.setMessage(Component.literal("Parent: нет§3(вкладка)"));
             saveState();
             rebuildWidgets();
-        }).bounds(fl + bw + 5, y, 20, FH).build());
-        resetBtn.active = !isVanilla;
-        y += FH + gap;
+        }).bounds(fieldLeft + buttonWidth + 5, currentY, 20, FIELD_HEIGHT).build());
+        resetParentButton.active = !isVanilla;
+        currentY += FIELD_HEIGHT + gap;
 
         if (root) {
-            String bgLabel = savedBackground != null && !savedBackground.isEmpty() ? shortBgName(savedBackground) : "не выбран";
-            bgButton = addRenderableWidget(Button.builder(Component.literal("Фон: " + bgLabel), b -> {
+            String backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? shortBgName(savedBackground) : " stone(по умолч., не выбран)";
+            bgButton = addRenderableWidget(Button.builder(Component.literal("Фон: " + backgroundLabel), b -> {
                 saveState();
                 setFocused(null);
                 minecraft.setScreen(new ItemPickerScreen(this, item -> {
                     ResourceLocation blockId = BuiltInRegistries.ITEM.getKey(item);
                     if (blockId != null) {
                         savedBackground = blockId.getNamespace() + ":block/" + blockId.getPath();
-                        AdvancementWaypoints.LOGGER.info(savedBackground);
                     }
                 }, true));
-            }).bounds(fl, y, fw, FH).build());
-            y += FH + gap;
+            }).bounds(fieldLeft, currentY, fieldWidth, FIELD_HEIGHT).build());
+            currentY += FIELD_HEIGHT + gap;
         } else {
             bgButton = null;
         }
 
-        descField = addBox(fl, y, fw, "Описание...", savedDesc);
+        descField = addBox(fieldLeft, currentY, fieldWidth, "Описание...", savedDesc);
         descField.setMaxLength(512);
-        y += FH;
+        currentY += FIELD_HEIGHT;
 
-        y += 6;
-        sep1Y = y;
-        y += 7;
+        currentY += 6;
+        separator1Y = currentY;
+        currentY += 7;
 
         if (!root) {
-            int cw = CFW * 3 + GAP * 2;
-            int rl = cx - (cw + GAP + FILL_W) / 2;
+            int coordRowTotalWidth = COORD_FIELD_WIDTH * 3 + GAP * 2;
+            int coordRowLeft = centerX - (coordRowTotalWidth + GAP + FILL_BUTTON_WIDTH) / 2;
 
             for (int i = 0; i < coordRows.size(); i++) {
-                CoordRow cr = coordRows.get(i);
+                CoordRow coordRow = coordRows.get(i);
 
                 addRenderableWidget(Button.builder(Component.literal("Удалить"), b -> {
                     saveState();
-                    coordRows.remove(cr);
+                    coordRows.remove(coordRow);
                     setFocused(null);
                     rebuildWidgets();
-                }).bounds(rl + cw + GAP, y, FILL_W, 16).build());
+                }).bounds(coordRowLeft + coordRowTotalWidth + GAP, currentY, FILL_BUTTON_WIDTH, 16).build());
 
-                int by2 = y + 18;
-                cr.bx = addCoord(rl, by2, "X"); cr.bx.setValue(cr.sx);
-                cr.by = addCoord(rl + CFW + GAP, by2, "Y"); cr.by.setValue(cr.sy);
-                cr.bz = addCoord(rl + 2 * (CFW + GAP), by2, "Z"); cr.bz.setValue(cr.sz);
+                int coordFieldY = currentY + 18;
+                coordRow.bx = addCoord(coordRowLeft, coordFieldY, "X"); coordRow.bx.setValue(coordRow.sx);
+                coordRow.by = addCoord(coordRowLeft + COORD_FIELD_WIDTH + GAP, coordFieldY, "Y"); coordRow.by.setValue(coordRow.sy);
+                coordRow.bz = addCoord(coordRowLeft + 2 * (COORD_FIELD_WIDTH + GAP), coordFieldY, "Z"); coordRow.bz.setValue(coordRow.sz);
 
-                boolean current = (cr.dim == currentDim());
-                Button fill = addRenderableWidget(Button.builder(Component.literal("Текущие"), b -> {
+                boolean isCurrentDimension = (coordRow.dim == currentDim());
+                Button fillCoordsButton = addRenderableWidget(Button.builder(Component.literal("Текущие"), b -> {
                     if (minecraft.player == null) return;
-                    cr.bx.setValue(String.valueOf((int) minecraft.player.getX()));
-                    cr.by.setValue(String.valueOf((int) minecraft.player.getY()));
-                    cr.bz.setValue(String.valueOf((int) minecraft.player.getZ()));
-                }).bounds(rl + cw + GAP, by2 - 2, FILL_W, 20).build());
-                fill.active = current;
+                    coordRow.bx.setValue(String.valueOf((int) minecraft.player.getX()));
+                    coordRow.by.setValue(String.valueOf((int) minecraft.player.getY()));
+                    coordRow.bz.setValue(String.valueOf((int) minecraft.player.getZ()));
+                }).bounds(coordRowLeft + coordRowTotalWidth + GAP, coordFieldY - 2, FILL_BUTTON_WIDTH, 20).build());
+                fillCoordsButton.active = isCurrentDimension;
 
-                y += rowH + rowGap;
+                currentY += coordRowHeight + coordRowGap;
             }
 
-            Button addCoordsBtn = addRenderableWidget(Button.builder(Component.literal("Добавить координаты"), b -> {
+            Button addCoordsButton = addRenderableWidget(Button.builder(Component.literal("Добавить координаты"), b -> {
                 saveState();
                 setFocused(null);
                 minecraft.setScreen(new DimensionPickerScreen(this));
-            }).bounds(fl, y, fw, BH).build());
-            addCoordsBtn.active = !isVanilla;
-            y += BH;
+            }).bounds(fieldLeft, currentY, fieldWidth, BUTTON_HEIGHT).build());
+            addCoordsButton.active = !isVanilla;
+            currentY += BUTTON_HEIGHT;
 
-            y += 6;
-            sep2Y = y;
-            y += 7;
+            currentY += 6;
+            separator2Y = currentY;
+            currentY += 7;
         } else {
-            sep2Y = sep1Y;
+            separator2Y = separator1Y;
         }
 
-        initActions(cx, y);
+        initActions(centerX, currentY);
     }
 
-    protected abstract void initActions(int cx, int y);
+    protected abstract void initActions(int centerX, int currentY);
 
     @Override
-    public boolean mouseClicked(double mx, double my, int b) { return super.mouseClicked(mx / scale, my / scale, b); }
+    public boolean mouseClicked(double mouseX, double mouseY, int button) { return super.mouseClicked(mouseX / scale, mouseY / scale, button); }
     @Override
-    public boolean mouseReleased(double mx, double my, int b) { return super.mouseReleased(mx / scale, my / scale, b); }
+    public boolean mouseReleased(double mouseX, double mouseY, int button) { return super.mouseReleased(mouseX / scale, mouseY / scale, button); }
     @Override
-    public boolean mouseDragged(double mx, double my, int b, double dx, double dy) { return super.mouseDragged(mx / scale, my / scale, b, dx / scale, dy / scale); }
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) { return super.mouseDragged(mouseX / scale, mouseY / scale, button, deltaX / scale, deltaY / scale); }
     @Override
-    public void mouseMoved(double mx, double my) { super.mouseMoved(mx / scale, my / scale); }
+    public void mouseMoved(double mouseX, double mouseY) { super.mouseMoved(mouseX / scale, mouseY / scale); }
     @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) { return super.mouseScrolled(mx / scale, my / scale, sx, sy); }
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) { return super.mouseScrolled(mouseX / scale, mouseY / scale, scrollX, scrollY); }
 
     @Override
-    public void render(GuiGraphics g, int mx, int my, float d) {
-        g.pose().pushMatrix();
-        g.pose().scale(scale, scale);
-        int smx = (int)(mx / scale), smy = (int)(my / scale);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        graphics.pose().pushMatrix();
+        graphics.pose().scale(scale, scale);
+        int scaledMouseX = (int)(mouseX / scale), scaledMouseY = (int)(mouseY / scale);
 
-        g.blit(RenderPipelines.GUI_TEXTURED, BG, px, py, 0f, 0f, pw, ph, pw, ph);
-        super.render(g, smx, smy, d);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BG, panelX, panelY, 0f, 0f, panelWidth, panelHeight, panelWidth, panelHeight);
+        super.render(graphics, scaledMouseX, scaledMouseY, delta);
 
-        g.drawString(font, title, px + pw / 2 - font.width(title) / 2, py + 8, 0xFF222222, false);
+        graphics.drawString(font, title, panelX + panelWidth / 2 - font.width(title) / 2, panelY + 8, 0xFF222222, false);
         iconButton.setMessage(Component.literal("Иконка: " + iconId()));
         if (bgButton != null) {
-            String bgLabel = savedBackground != null && !savedBackground.isEmpty() ? shortBgName(savedBackground) : "не выбран";
-            bgButton.setMessage(Component.literal("Фон: " + bgLabel));
+            String backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? shortBgName(savedBackground) : "stone(по умолч., не выбран)";
+            bgButton.setMessage(Component.literal("Фон: " + backgroundLabel));
         }
-        g.renderItem(new ItemStack(selectedIcon), iconButton.getX() + iconButton.getWidth() + 7, iconButton.getY() + 1);
-        g.fill(px + 15, sep1Y, px + pw - 15, sep1Y + 1, 0xFF777777);
-        if (sep2Y != sep1Y) {
-            g.fill(px + 15, sep2Y, px + pw - 15, sep2Y + 1, 0xFF777777);
+        graphics.renderItem(new ItemStack(selectedIcon), iconButton.getX() + iconButton.getWidth() + 7, iconButton.getY() + 1);
+        graphics.fill(panelX + 15, separator1Y, panelX + panelWidth - 15, separator1Y + 1, 0xFF777777);
+        if (separator2Y != separator1Y) {
+            graphics.fill(panelX + 15, separator2Y, panelX + panelWidth - 15, separator2Y + 1, 0xFF777777);
         }
 
         if (!isRoot()) {
-            int cw = CFW * 3 + GAP * 2;
-            int rl = px + pw / 2 - (cw + GAP + FILL_W) / 2;
-            for (CoordRow cr : coordRows) {
-                if (cr.bx != null) {
-                    g.drawString(font, CoordParser.DIM_LABELS[cr.dim], rl, cr.bx.getY() - 11, 0xFFFFFFFF, false);
+            int coordRowTotalWidth = COORD_FIELD_WIDTH * 3 + GAP * 2;
+            int coordRowLeft = panelX + panelWidth / 2 - (coordRowTotalWidth + GAP + FILL_BUTTON_WIDTH) / 2;
+            for (CoordRow coordRow : coordRows) {
+                if (coordRow.bx != null) {
+                    graphics.drawString(font, CoordParser.DIM_LABELS[coordRow.dim], coordRowLeft, coordRow.bx.getY() - 11, 0xFFFFFFFF, false);
                 }
             }
         }
-        g.pose().popMatrix();
+        graphics.pose().popMatrix();
     }
 
     @Override
@@ -243,48 +242,48 @@ public abstract class WaypointFormScreen extends Screen {
 
     public void addDimRow(int dim) {
         saveState();
-        CoordRow cr = new CoordRow(dim);
+        CoordRow newRow = new CoordRow(dim);
         if (dim == currentDim() && minecraft != null && minecraft.player != null) {
-            cr.sx = String.valueOf((int) minecraft.player.getX());
-            cr.sy = String.valueOf((int) minecraft.player.getY());
-            cr.sz = String.valueOf((int) minecraft.player.getZ());
+            newRow.sx = String.valueOf((int) minecraft.player.getX());
+            newRow.sy = String.valueOf((int) minecraft.player.getY());
+            newRow.sz = String.valueOf((int) minecraft.player.getZ());
         }
-        coordRows.add(cr);
+        coordRows.add(newRow);
     }
 
     public void onParentSelected(ResourceLocation newParent) {
         selectedParentId = newParent;
         if (!hadParentBefore && coordRows.isEmpty()) {
-            CoordRow cr = new CoordRow(currentDim());
+            CoordRow newRow = new CoordRow(currentDim());
             if (minecraft != null && minecraft.player != null) {
-                cr.sx = String.valueOf((int) minecraft.player.getX());
-                cr.sy = String.valueOf((int) minecraft.player.getY());
-                cr.sz = String.valueOf((int) minecraft.player.getZ());
+                newRow.sx = String.valueOf((int) minecraft.player.getX());
+                newRow.sy = String.valueOf((int) minecraft.player.getY());
+                newRow.sz = String.valueOf((int) minecraft.player.getZ());
             }
-            coordRows.add(cr);
+            coordRows.add(newRow);
         }
     }
 
     protected void saveState() {
         if (nameField != null) savedName = nameField.getValue();
         if (descField != null) savedDesc = descField.getValue();
-        for (CoordRow cr : coordRows) {
-            if (cr.bx != null) cr.sx = cr.bx.getValue();
-            if (cr.by != null) cr.sy = cr.by.getValue();
-            if (cr.bz != null) cr.sz = cr.bz.getValue();
+        for (CoordRow coordRow : coordRows) {
+            if (coordRow.bx != null) coordRow.sx = coordRow.bx.getValue();
+            if (coordRow.by != null) coordRow.sy = coordRow.by.getValue();
+            if (coordRow.bz != null) coordRow.sz = coordRow.bz.getValue();
         }
     }
 
     protected List<CoordParser.DimCoords> collectCoords() {
-        List<List<String[]>> perDim = new ArrayList<>();
-        for (int i = 0; i < 4; i++) perDim.add(new ArrayList<>());
+        List<List<String[]>> coordsPerDimension = new ArrayList<>();
+        for (int i = 0; i < 4; i++) coordsPerDimension.add(new ArrayList<>());
 
-        for (CoordRow cr : coordRows) {
-            String x = cr.bx != null ? cr.bx.getValue().trim() : cr.sx.trim();
-            String y = cr.by != null ? cr.by.getValue().trim() : cr.sy.trim();
-            String z = cr.bz != null ? cr.bz.getValue().trim() : cr.sz.trim();
+        for (CoordRow coordRow : coordRows) {
+            String x = coordRow.bx != null ? coordRow.bx.getValue().trim() : coordRow.sx.trim();
+            String y = coordRow.by != null ? coordRow.by.getValue().trim() : coordRow.sy.trim();
+            String z = coordRow.bz != null ? coordRow.bz.getValue().trim() : coordRow.sz.trim();
             if (!x.isEmpty() || !y.isEmpty() || !z.isEmpty()) {
-                perDim.get(cr.dim).add(new String[]{
+                coordsPerDimension.get(coordRow.dim).add(new String[]{
                         x.isEmpty() ? "0" : x,
                         y.isEmpty() ? "0" : y,
                         z.isEmpty() ? "0" : z
@@ -294,34 +293,34 @@ public abstract class WaypointFormScreen extends Screen {
 
         List<CoordParser.DimCoords> result = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
-            if (!perDim.get(i).isEmpty()) result.add(new CoordParser.DimCoords(i, perDim.get(i)));
+            if (!coordsPerDimension.get(i).isEmpty()) result.add(new CoordParser.DimCoords(i, coordsPerDimension.get(i)));
         }
         return result;
     }
 
     protected String buildFinalDescription() {
-        String desc = isRoot() ? (descField != null ? descField.getValue().trim() : savedDesc) 
-                               : CoordParser.buildDescription(selectedParentId != null ? collectCoords() : new ArrayList<>(), descField != null ? descField.getValue().trim() : savedDesc);
-        return colorCodes(desc);
+        String description = isRoot() ? (descField != null ? descField.getValue().trim() : savedDesc)
+                : CoordParser.buildDescription(selectedParentId != null ? collectCoords() : new ArrayList<>(), descField != null ? descField.getValue().trim() : savedDesc);
+        return colorCodes(description);
     }
 
     protected String getBackgroundValue() {
         if (savedBackground != null && !savedBackground.isEmpty()) return savedBackground;
-        return null;
+        return BuiltInRegistries.ITEM.getKey(Items.STONE).getNamespace() + ":block/" + BuiltInRegistries.ITEM.getKey(Items.STONE).getPath();
     }
 
     protected String iconId() {
-        ResourceLocation loc = BuiltInRegistries.ITEM.getKey(selectedIcon);
-        return loc != null ? loc.toString() : "minecraft:stone";
+        ResourceLocation iconLocation = BuiltInRegistries.ITEM.getKey(selectedIcon);
+        return iconLocation.toString();
     }
 
     protected int currentDim() {
         if (minecraft == null || minecraft.level == null) return 0;
-        String dim = minecraft.level.dimension().location().toString();
-        if (dim.equals("minecraft:the_nether")) {
+        String dimensionId = minecraft.level.dimension().location().toString();
+        if (dimensionId.equals("minecraft:the_nether")) {
             return (minecraft.player != null && minecraft.player.getY() >= 127) ? 1 : 2;
         }
-        if (dim.equals("minecraft:the_end")) return 3;
+        if (dimensionId.equals("minecraft:the_end")) return 3;
         return 0;
     }
 
@@ -333,9 +332,9 @@ public abstract class WaypointFormScreen extends Screen {
         if (selectedParentId == null) return "нет";
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return selectedParentId.toString();
-        AdvancementNode node = mc.player.connection.getAdvancements().getTree().get(selectedParentId);
-        if (node != null && node.holder().value().display().isPresent()) {
-            return node.holder().value().display().get().getTitle().getString();
+        AdvancementNode advancementNode = mc.player.connection.getAdvancements().getTree().get(selectedParentId);
+        if (advancementNode != null && advancementNode.holder().value().display().isPresent()) {
+            return advancementNode.holder().value().display().get().getTitle().getString();
         }
         return selectedParentId.toString();
     }
@@ -349,26 +348,26 @@ public abstract class WaypointFormScreen extends Screen {
         }
     }
 
-    private String shortBgName(String full) {
-        if (full == null) return "?";
-        int lastSlash = full.lastIndexOf('/');
-        String name = lastSlash >= 0 ? full.substring(lastSlash + 1) : full;
+    private String shortBgName(String fullPath) {
+        if (fullPath == null) return "?";
+        int lastSlash = fullPath.lastIndexOf('/');
+        String name = lastSlash >= 0 ? fullPath.substring(lastSlash + 1) : fullPath;
         if (name.endsWith(".png")) name = name.substring(0, name.length() - 4);
         return name;
     }
 
-    private EditBox addBox(int x, int y, int w, String hint, String val) {
-        EditBox b = new EditBox(font, x, y, w, FH, Component.literal(""));
-        b.setMaxLength(256);
-        b.setHint(Component.literal(hint));
-        b.setValue(val != null ? val : "");
-        return addRenderableWidget(b);
+    private EditBox addBox(int x, int y, int width, String hint, String value) {
+        EditBox editBox = new EditBox(font, x, y, width, FIELD_HEIGHT, Component.literal(""));
+        editBox.setMaxLength(256);
+        editBox.setHint(Component.literal(hint));
+        editBox.setValue(value != null ? value : "");
+        return addRenderableWidget(editBox);
     }
 
     private EditBox addCoord(int x, int y, String hint) {
-        EditBox b = new EditBox(font, x, y, CFW, FH, Component.literal(""));
-        b.setMaxLength(10);
-        b.setHint(Component.literal(hint));
-        return addRenderableWidget(b);
+        EditBox coordBox = new EditBox(font, x, y, COORD_FIELD_WIDTH, FIELD_HEIGHT, Component.literal(""));
+        coordBox.setMaxLength(10);
+        coordBox.setHint(Component.literal(hint));
+        return addRenderableWidget(coordBox);
     }
 }

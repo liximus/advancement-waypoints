@@ -41,6 +41,7 @@ public class Navigator {
     }
 
     public void setTargets(Dimension dim, List<BlockPos> list) {
+        if (dim == null) return;
         if (list == null || list.isEmpty()) targets.remove(dim);
         else targets.put(dim, new ArrayList<>(list));
     }
@@ -48,7 +49,12 @@ public class Navigator {
     @Nullable
     public BlockPos getNearest(Dimension dim, BlockPos from) {
         if (from == null) return null;
-        List<BlockPos> list = targets.get(dim);
+        return nearestOf(targets.get(dim), from);
+    }
+
+    @Nullable
+    public static BlockPos nearestOf(List<BlockPos> list, BlockPos from) {
+        if (from == null) return null;
         if (list == null || list.isEmpty()) return null;
         if (list.size() == 1) return list.get(0);
         BlockPos nearest = null;

@@ -32,6 +32,8 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
 
     @Unique private final Set<ResourceLocation> injected = new HashSet<>();
     @Unique private final Map<ResourceLocation, float[]> vanillaOriginals = new HashMap<>();
+    @Unique private long lastInjectMs = 0L;
+    @Unique private static final long INJECT_DEBOUNCE_MS = 250L;
 
     @Final @Shadow private AdvancementTree tree;
     @Final @Shadow private Map<AdvancementHolder, AdvancementProgress> progress;
@@ -39,6 +41,9 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
 
     @Inject(method = "update", at = @At("RETURN"))
     private void onUpdate(ClientboundUpdateAdvancementsPacket pkt, CallbackInfo ci) {
+        long now = System.currentTimeMillis();
+        if (now - lastInjectMs < INJECT_DEBOUNCE_MS) return;
+        lastInjectMs = now;
         advWaypoint_inject();
     }
 
@@ -117,7 +122,7 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
 
             refreshUI();
         } catch (Exception e) {
-            e.printStackTrace();
+            com.listraind.advancementwaypoints.AdvancementWaypoints.LOGGER.error("advWaypoint_inject failed", e);
         }
     }
 
@@ -151,10 +156,6 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
     private void refreshUI() {
         if (listener == null) return;
 
-        if (listener instanceof IBetterAdvancementsScreen screen) {
-            screen.advWp_recalculateAll();
-        }
-
         for (AdvancementNode n : tree.nodes()) {
             AdvancementProgress p = progress.get(n.holder());
             if (p == null) {
@@ -162,6 +163,10 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
                 p.update(n.advancement().requirements());
             }
             listener.onUpdateAdvancementProgress(n, p);
+        }
+
+        if (listener instanceof IBetterAdvancementsScreen screen) {
+            screen.advWp_recalculateAll();
         }
     }
 

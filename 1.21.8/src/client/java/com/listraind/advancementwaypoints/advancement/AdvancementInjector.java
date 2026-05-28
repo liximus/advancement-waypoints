@@ -33,8 +33,6 @@ public class AdvancementInjector {
                 bg = "minecraft:torch";
             }
 
-            AdvancementWaypoints.LOGGER.info(bg);
-
             result.add(new WaypointData(
                     id,
                     ConfigIO.str(o, "icon", "minecraft:paper"),
