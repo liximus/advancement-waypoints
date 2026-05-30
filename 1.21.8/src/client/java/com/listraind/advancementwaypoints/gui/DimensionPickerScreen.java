@@ -19,7 +19,7 @@ public class DimensionPickerScreen extends Screen {
     private int panelX, panelY, panelW, panelH;
 
     public DimensionPickerScreen(WaypointFormScreen parent) {
-        super(Component.literal("§8Выберите измерение"));
+        super(Component.translatable("advwp.picker.dimension.title"));
         this.parent = parent;
     }
 
@@ -37,10 +37,9 @@ public class DimensionPickerScreen extends Screen {
 
         for (int i = 0; i < 4; i++) {
             int dim = i;
-            String label = CoordParser.DIM_LABELS[i].replaceAll("§[0-9a-f]", "");
             int color = COLORS[i];
             addRenderableWidget(Button.builder(
-                    Component.literal(label).withStyle(s -> s.withColor(color)),
+                    Component.translatable(CoordParser.DIM_LABEL_KEYS[i]).withStyle(s -> s.withColor(color)),
                     b -> { parent.addDimRow(dim); minecraft.setScreen(parent); }
             ).bounds(panelX + pad, panelY + pad + 20 + i * (bh + gap), bw, bh).build());
         }

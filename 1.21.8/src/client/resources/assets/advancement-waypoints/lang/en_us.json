@@ -1,0 +1,45 @@
+{
+  "advwp.menu.title": "§8Waypoints menu",
+  "advwp.menu.create": "Create",
+  "advwp.menu.edit": "Edit",
+
+  "advwp.create.title": "§8Create waypoint",
+  "advwp.edit.title": "§8Edit waypoint",
+
+  "advwp.button.create_save": "§aCreate",
+  "advwp.button.save": "§aSave",
+  "advwp.button.delete": "§cDelete",
+  "advwp.button.read_only": "§7Read-only",
+  "advwp.button.modbutton.tooltip": "Waypoints menu",
+
+  "advwp.field.icon": "Icon: %s",
+  "advwp.field.parent": "Parent: %s",
+  "advwp.field.parent.none": "none §3(tab)",
+  "advwp.field.parent.reset": "X",
+  "advwp.field.background": "Background: %s",
+  "advwp.field.background.default": "stone (default, not set)",
+
+  "advwp.coord.row.delete": "Remove",
+  "advwp.coord.row.fill": "Current",
+  "advwp.coord.row.add": "Add coordinates",
+
+  "advwp.hint.name": "Name...",
+  "advwp.hint.description": "Description...",
+  "advwp.hint.search.item": "Search item",
+  "advwp.hint.search.background": "Search background",
+
+  "advwp.picker.icon.title": "§8Choose icon",
+  "advwp.picker.background.title": "§8Choose background",
+  "advwp.picker.dimension.title": "§8Choose dimension",
+
+  "advwp.dim.overworld": "§2Overworld",
+  "advwp.dim.nether_roof": "§4Nether roof",
+  "advwp.dim.nether": "§cNether",
+  "advwp.dim.end": "§eEnd",
+
+  "advwp.parent.none": "none",
+
+  "advwp.key.category": "Advancement Waypoints",
+  "advwp.key.open_menu": "Open menu",
+  "advwp.key.clear_nav": "Clear navigator"
+}

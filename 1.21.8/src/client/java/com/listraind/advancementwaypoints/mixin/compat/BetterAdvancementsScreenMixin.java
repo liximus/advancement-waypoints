@@ -89,7 +89,7 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
             setFocused(null);
             minecraft.setScreen(new MainMenuScreen(this));
         }).bounds(btnX, btnY, btnW, btnH)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Меню ваеёпоинтов")))
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("advwp.button.modbutton.tooltip")))
                 .build());
     }
 
@@ -111,8 +111,15 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
         pressBtn = btn;
     }
 
-    @Inject(method = "mouseReleased(DDI)Z", at = @At("RETURN"))
-    private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
+    @Override
+    public boolean mouseReleased(double mx, double my, int btn) {
+        boolean result = super.mouseReleased(mx, my, btn);
+        advWp_handleRelease(mx, my, btn, result);
+        return result;
+    }
+
+    @Unique
+    private void advWp_handleRelease(double mx, double my, int btn, boolean alreadyHandled) {
         int storedBtn = pressBtn;
         double dxPress = mx - pressMx;
         double dyPress = my - pressMy;
@@ -120,7 +127,7 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
         if (storedBtn != btn) return;
         if (dxPress*dxPress + dyPress*dyPress > DRAG_THRESHOLD * DRAG_THRESHOLD) return;
         if (selectedTab == null) return;
-        if (Boolean.TRUE.equals(cir.getReturnValue())) return;
+        if (alreadyHandled) return;
 
         BetterAdvancementTabAccessor tab = (BetterAdvancementTabAccessor) selectedTab;
 

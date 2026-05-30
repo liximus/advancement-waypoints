@@ -28,6 +28,13 @@ public class CoordParser {
 
     public static final String[] DIM_LABELS = {"§2Верхний мир", "§4Крыша ада", "§cАд", "§eЭнд"};
 
+    public static final String[] DIM_LABEL_KEYS = {
+            "advwp.dim.overworld",
+            "advwp.dim.nether_roof",
+            "advwp.dim.nether",
+            "advwp.dim.end"
+    };
+
     private static final Pattern COORD_BLOCK_PATTERN = Pattern.compile(
             "(?:§[0-9a-f])?(Верхний мир|Крыша ада|Ад|Энд):\\s*\\n((?:\\s*§6X:-?\\d+\\s*Y:-?\\d+\\s*Z:-?\\d+\\s*\\n?)+)",
             Pattern.CASE_INSENSITIVE
@@ -97,7 +104,6 @@ public class CoordParser {
 
     public static String extractExtra(String desc) {
         String result = COORD_BLOCK_PATTERN.matcher(desc).replaceAll("").replaceAll("\\n{3,}", "\n\n").trim();
-        // Удаляем накопившиеся коды формата §f в начале
         while (result.startsWith("§f")) {
             result = result.substring(2);
         }

@@ -65,38 +65,38 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
 
     @Inject(method = "init", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
-        int windowW = 252;
-        int windowH = 140;
-        int panelLeft = (this.width - windowW) / 2;
-        int panelTop = (this.height - windowH) / 2;
-        int panelRight = panelLeft + windowW;
-
-        int btnW = 26, btnH = 26;
-        int gap = 5;
-
-        int btnY = panelTop + 20;
-        int btnX = panelRight - btnW - gap;
-
-        btnX = Math.max(2, Math.min(btnX, this.width - btnW - 2));
-        btnY = Math.max(2, Math.min(btnY, this.height - btnH - 2));
-
         modButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
             setFocused(null);
             minecraft.setScreen(new MainMenuScreen(this));
-        }).bounds(btnX, btnY, btnW, btnH)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Меню ваеёпоинтов")))
+        }).bounds(0, 0, 20, 20)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("advwp.button.modbutton.tooltip")))
                 .build());
+        advWp_syncModButton();
+    }
+
+    @Unique
+    private void advWp_syncModButton() {
+        if (modButton == null) return;
+        int btnW = modButton.getWidth(), btnH = modButton.getHeight();
+        int panelLeft = (this.width - AdvancementsScreen.WINDOW_WIDTH) / 2;
+        int panelTop  = (this.height - AdvancementsScreen.WINDOW_HEIGHT) / 2;
+        int panelRight = panelLeft + AdvancementsScreen.WINDOW_WIDTH;
+        int btnX = Math.max(2, Math.min(panelRight - 9 - 3 - btnW, this.width  - btnW - 2));
+        int btnY = Math.max(2, Math.min(panelTop + 20, this.height - btnH - 2));
+        modButton.setX(btnX);
+        modButton.setY(btnY);
     }
 
     @Inject(method = "render", at = @At("RETURN"))
     private void onRender(GuiGraphics g, int mx, int my, float pt, CallbackInfo ci) {
-        if (modButton != null) {
-            int ix = modButton.getX() + (modButton.getWidth() - 20) / 2;
-            int iy = modButton.getY() + (modButton.getHeight() - 20) / 2;
-            g.blit(RenderPipelines.GUI_TEXTURED,
-                    ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/logo.png"),
-                    ix, iy, 0f, 0f, 20, 20, 20, 20);
-        }
+        if (modButton == null) return;
+        advWp_syncModButton();
+        modButton.render(g, mx, my, pt);
+        int ix = modButton.getX() + (modButton.getWidth()  - 16) / 2;
+        int iy = modButton.getY() + (modButton.getHeight() - 16) / 2;
+        g.blit(RenderPipelines.GUI_TEXTURED,
+                ResourceLocation.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/logo.png"),
+                ix, iy, 0f, 0f, 16, 16, 16, 16);
     }
 
     @Inject(method = "renderWindow", at = @At("HEAD"))
@@ -112,70 +112,77 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
         pressBtn = btn;
     }
 
-    @Inject(method = "mouseReleased", at = @At("RETURN"))
-    private void onClick(double mx, double my, int btn, CallbackInfoReturnable<Boolean> cir) {
+    @Override
+    public boolean mouseReleased(double mx, double my, int btn) {
+        boolean result = super.mouseReleased(mx, my, btn);
+        advWp_handleRelease(mx, my, btn, result);
+        return result;
+    }
+
+    @Unique
+    private void advWp_handleRelease(double mx, double my, int btn, boolean alreadyHandled) {
         int storedBtn = pressBtn;
-        double dx = mx - pressMx;
-        double dy = my - pressMy;
+        double dxPress = mx - pressMx;
+        double dyPress = my - pressMy;
         pressBtn = -1;
         if (storedBtn != btn) return;
-        if (dx*dx + dy*dy > DRAG_THRESHOLD * DRAG_THRESHOLD) return;
+        if (dxPress*dxPress + dyPress*dyPress > DRAG_THRESHOLD * DRAG_THRESHOLD) return;
         if (selectedTab == null) return;
-        if (Boolean.TRUE.equals(cir.getReturnValue())) return;
+        if (alreadyHandled) return;
 
-            AdvancementTabAccessor tab = (AdvancementTabAccessor) selectedTab;
-            int contentLeft = lastWinX + 9;
-            int contentTop = lastWinY + 18;
-            int relX = (int) mx - contentLeft;
-            int relY = (int) my - contentTop;
-            int sx = Mth.floor(tab.getScrollX());
-            int sy = Mth.floor(tab.getScrollY());
+        AdvancementTabAccessor tab = (AdvancementTabAccessor) selectedTab;
+        int contentLeft = lastWinX + 9;
+        int contentTop = lastWinY + 18;
+        int relX = (int) mx - contentLeft;
+        int relY = (int) my - contentTop;
+        int sx = Mth.floor(tab.getScrollX());
+        int sy = Mth.floor(tab.getScrollY());
 
-            for (Object w : tab.getWidgets().values()) {
-                AdvancementWidgetAccessor wa = (AdvancementWidgetAccessor) w;
-                if (wa.invokeIsMouseOver(sx, sy, relX, relY)) {
-                    AdvancementNode node = wa.getAdvancementNode();
-                    node.holder().value().display().ifPresent(d -> {
-                        ResourceLocation id = node.holder().id();
-                        if(btn==0) {
-                            if (selectMode) {
-                                selectCallback.accept(id);
-                                Screen target = screenToOpen != null ? screenToOpen : (parentScreen != null ? parentScreen : lastScreen);
-                                minecraft.setScreen(target);
+        for (Object w : tab.getWidgets().values()) {
+            AdvancementWidgetAccessor wa = (AdvancementWidgetAccessor) w;
+            if (wa.invokeIsMouseOver(sx, sy, relX, relY)) {
+                AdvancementNode node = wa.getAdvancementNode();
+                node.holder().value().display().ifPresent(d -> {
+                    ResourceLocation id = node.holder().id();
+                    if(btn==0) {
+                        if (selectMode) {
+                            selectCallback.accept(id);
+                            Screen target = screenToOpen != null ? screenToOpen : (parentScreen != null ? parentScreen : lastScreen);
+                            minecraft.setScreen(target);
+                        } else {
+                            Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
+                            Navigator nav = Navigator.getInstance();
+                            if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
+                                nav.setCurrentId(id);
+                                nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
+                                nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
+                                nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
                             } else {
-                                Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
-                                Navigator nav = Navigator.getInstance();
-                                if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
-                                    nav.setCurrentId(id);
-                                    nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
-                                    nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
-                                    nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
-                                } else {
-                                    nav.clearAll();
-                                    nav.setCurrentId(null);
-                                }
-                                if (targets != null) Minecraft.getInstance().setScreen(null);
+                                nav.clearAll();
+                                nav.setCurrentId(null);
                             }
-                        }else if(btn==1) {
-                            Player player = Minecraft.getInstance().player;
-                            if (player == null) return;
-                            Navigator.Dimension dim = Navigator.Dimension.from(player.level().dimension());
-                            if (dim == null) return;
-                            Map<Navigator.Dimension, List<BlockPos>> parsed = CoordParser.parseForNavigation(d.getDescription().getString());
-                            if (parsed == null) return;
-                            List<BlockPos> targets = parsed.get(dim);
-                            if(targets == null) return;
-                            BlockPos target = Navigator.nearestOf(targets, player.blockPosition());
-                            if(target == null) return;
-                            String command = "tp" + " " + target.getX() + " " + target.getY() + " " + target.getZ();
-                            Minecraft.getInstance().player.connection.sendCommand(command);
-                            Minecraft.getInstance().setScreen(null);
+                            if (targets != null) Minecraft.getInstance().setScreen(null);
                         }
-                    });
-                    break;
-                }
+                    }else if(btn==1) {
+                        Player player = Minecraft.getInstance().player;
+                        if (player == null) return;
+                        Navigator.Dimension dim = Navigator.Dimension.from(player.level().dimension());
+                        if (dim == null) return;
+                        Map<Navigator.Dimension, List<BlockPos>> parsed = CoordParser.parseForNavigation(d.getDescription().getString());
+                        if (parsed == null) return;
+                        List<BlockPos> targets = parsed.get(dim);
+                        if(targets == null) return;
+                        BlockPos target = Navigator.nearestOf(targets, player.blockPosition());
+                        if(target == null) return;
+                        String command = "tp" + " " + target.getX() + " " + target.getY() + " " + target.getZ();
+                        Minecraft.getInstance().player.connection.sendCommand(command);
+                        Minecraft.getInstance().setScreen(null);
+                    }
+                });
+                break;
             }
         }
+    }
 
     @Override
     public void advWaypoint_setSelectMode(Consumer<ResourceLocation> cb) {

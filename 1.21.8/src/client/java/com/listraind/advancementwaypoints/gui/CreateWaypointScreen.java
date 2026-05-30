@@ -13,7 +13,7 @@ public class CreateWaypointScreen extends WaypointFormScreen {
     private boolean initialized = false;
 
     public CreateWaypointScreen() {
-        super(Component.literal( "§8Создание вейпоинта"));
+        super(Component.translatable("advwp.create.title"));
         selectedParentId = WaypointStorage.getLastParent();
     }
 
@@ -66,7 +66,7 @@ public class CreateWaypointScreen extends WaypointFormScreen {
 
     @Override
     protected void initActions(int cx, int y) {
-        addRenderableWidget(Button.builder(Component.literal("§aСоздать"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("advwp.button.create_save"), b -> {
             String name = colorCodes(nameField.getValue().trim());
             if (name.isEmpty()) name = "waypoint";
 

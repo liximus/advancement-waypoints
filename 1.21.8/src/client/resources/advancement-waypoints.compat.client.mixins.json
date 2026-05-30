@@ -5,6 +5,7 @@
 	"plugin": "com.listraind.advancementwaypoints.mixin.compat.BetterAdvancementsMixinPlugin",
 	"client": [
 		"BetterAdvancementsScreenMixin",
+		"BetterAdvancementTabMixin",
 		"BetterAdvancementTabAccessor",
 		"BetterAdvancementWidgetMixin"
 	],

@@ -88,19 +88,19 @@ public abstract class WaypointFormScreen extends Screen {
         int fieldLeft = centerX - fieldWidth / 2;
         int currentY = panelY + padding + 14 + gap;
 
-        nameField = addBox(fieldLeft, currentY, fieldWidth, "Название...", savedName);
+        nameField = addBox(fieldLeft, currentY, fieldWidth, "advwp.hint.name", savedName);
         currentY += FIELD_HEIGHT + gap;
 
         int buttonWidth = fieldWidth - 25;
-        iconButton = addRenderableWidget(Button.builder(Component.literal("Иконка: " + iconId()), b -> {
+        iconButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.icon", iconId()), b -> {
             saveState();
             setFocused(null);
             minecraft.setScreen(new ItemPickerScreen(this, item -> selectedIcon = item));
         }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
         currentY += FIELD_HEIGHT + gap;
 
-        String parentDisplayName = selectedParentId != null ? parentName() : "нет§3(вкладка)";
-        parentButton = addRenderableWidget(Button.builder(Component.literal("Parent: " + parentDisplayName), b -> {
+        Component parentDisplayName = selectedParentId != null ? Component.literal(parentName()) : Component.translatable("advwp.field.parent.none");
+        parentButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.parent", parentDisplayName), b -> {
             saveState();
             setFocused(null);
             hadParentBefore = selectedParentId != null;
@@ -108,9 +108,9 @@ public abstract class WaypointFormScreen extends Screen {
         }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
         parentButton.active = !isVanilla;
 
-        Button resetParentButton = addRenderableWidget(Button.builder(Component.literal("X"), b -> {
+        Button resetParentButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.parent.reset"), b -> {
             selectedParentId = null;
-            parentButton.setMessage(Component.literal("Parent: нет§3(вкладка)"));
+            parentButton.setMessage(Component.translatable("advwp.field.parent", Component.translatable("advwp.field.parent.none")));
             saveState();
             rebuildWidgets();
         }).bounds(fieldLeft + buttonWidth + 5, currentY, 20, FIELD_HEIGHT).build());
@@ -118,8 +118,8 @@ public abstract class WaypointFormScreen extends Screen {
         currentY += FIELD_HEIGHT + gap;
 
         if (root) {
-            String backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? shortBgName(savedBackground) : " stone(по умолч., не выбран)";
-            bgButton = addRenderableWidget(Button.builder(Component.literal("Фон: " + backgroundLabel), b -> {
+            Component backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? Component.literal(shortBgName(savedBackground)) : Component.translatable("advwp.field.background.default");
+            bgButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.background", backgroundLabel), b -> {
                 saveState();
                 setFocused(null);
                 minecraft.setScreen(new ItemPickerScreen(this, item -> {
@@ -134,7 +134,7 @@ public abstract class WaypointFormScreen extends Screen {
             bgButton = null;
         }
 
-        descField = addBox(fieldLeft, currentY, fieldWidth, "Описание...", savedDesc);
+        descField = addBox(fieldLeft, currentY, fieldWidth, "advwp.hint.description", savedDesc);
         descField.setMaxLength(512);
         currentY += FIELD_HEIGHT;
 
@@ -149,7 +149,7 @@ public abstract class WaypointFormScreen extends Screen {
             for (int i = 0; i < coordRows.size(); i++) {
                 CoordRow coordRow = coordRows.get(i);
 
-                addRenderableWidget(Button.builder(Component.literal("Удалить"), b -> {
+                addRenderableWidget(Button.builder(Component.translatable("advwp.coord.row.delete"), b -> {
                     saveState();
                     coordRows.remove(coordRow);
                     setFocused(null);
@@ -162,7 +162,7 @@ public abstract class WaypointFormScreen extends Screen {
                 coordRow.bz = addCoord(coordRowLeft + 2 * (COORD_FIELD_WIDTH + GAP), coordFieldY, "Z"); coordRow.bz.setValue(coordRow.sz);
 
                 boolean isCurrentDimension = (coordRow.dim == currentDim());
-                Button fillCoordsButton = addRenderableWidget(Button.builder(Component.literal("Текущие"), b -> {
+                Button fillCoordsButton = addRenderableWidget(Button.builder(Component.translatable("advwp.coord.row.fill"), b -> {
                     if (minecraft.player == null) return;
                     coordRow.bx.setValue(String.valueOf((int) minecraft.player.getX()));
                     coordRow.by.setValue(String.valueOf((int) minecraft.player.getY()));
@@ -173,7 +173,7 @@ public abstract class WaypointFormScreen extends Screen {
                 currentY += coordRowHeight + coordRowGap;
             }
 
-            Button addCoordsButton = addRenderableWidget(Button.builder(Component.literal("Добавить координаты"), b -> {
+            Button addCoordsButton = addRenderableWidget(Button.builder(Component.translatable("advwp.coord.row.add"), b -> {
                 saveState();
                 setFocused(null);
                 minecraft.setScreen(new DimensionPickerScreen(this));
@@ -214,10 +214,10 @@ public abstract class WaypointFormScreen extends Screen {
         super.render(graphics, scaledMouseX, scaledMouseY, delta);
 
         graphics.drawString(font, title, panelX + panelWidth / 2 - font.width(title) / 2, panelY + 8, 0xFF222222, false);
-        iconButton.setMessage(Component.literal("Иконка: " + iconId()));
+        iconButton.setMessage(Component.translatable("advwp.field.icon", iconId()));
         if (bgButton != null) {
-            String backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? shortBgName(savedBackground) : "stone(по умолч., не выбран)";
-            bgButton.setMessage(Component.literal("Фон: " + backgroundLabel));
+            Component backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? Component.literal(shortBgName(savedBackground)) : Component.translatable("advwp.field.background.default");
+            bgButton.setMessage(Component.translatable("advwp.field.background", backgroundLabel));
         }
         graphics.renderItem(new ItemStack(selectedIcon), iconButton.getX() + iconButton.getWidth() + 7, iconButton.getY() + 1);
         graphics.fill(panelX + 15, separator1Y, panelX + panelWidth - 15, separator1Y + 1, 0xFF777777);
@@ -230,7 +230,7 @@ public abstract class WaypointFormScreen extends Screen {
             int coordRowLeft = panelX + panelWidth / 2 - (coordRowTotalWidth + GAP + FILL_BUTTON_WIDTH) / 2;
             for (CoordRow coordRow : coordRows) {
                 if (coordRow.bx != null) {
-                    graphics.drawString(font, CoordParser.DIM_LABELS[coordRow.dim], coordRowLeft, coordRow.bx.getY() - 11, 0xFFFFFFFF, false);
+                    graphics.drawString(font, Component.translatable(CoordParser.DIM_LABEL_KEYS[coordRow.dim]), coordRowLeft, coordRow.bx.getY() - 11, 0xFFFFFFFF, false);
                 }
             }
         }
@@ -329,7 +329,7 @@ public abstract class WaypointFormScreen extends Screen {
     }
 
     private String parentName() {
-        if (selectedParentId == null) return "нет";
+        if (selectedParentId == null) return Component.translatable("advwp.parent.none").getString();
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return selectedParentId.toString();
         AdvancementNode advancementNode = mc.player.connection.getAdvancements().getTree().get(selectedParentId);
@@ -356,10 +356,10 @@ public abstract class WaypointFormScreen extends Screen {
         return name;
     }
 
-    private EditBox addBox(int x, int y, int width, String hint, String value) {
+    private EditBox addBox(int x, int y, int width, String hintKey, String value) {
         EditBox editBox = new EditBox(font, x, y, width, FIELD_HEIGHT, Component.literal(""));
         editBox.setMaxLength(256);
-        editBox.setHint(Component.literal(hint));
+        editBox.setHint(Component.translatable(hintKey));
         editBox.setValue(value != null ? value : "");
         return addRenderableWidget(editBox);
     }

@@ -57,7 +57,7 @@ public class ItemPickerScreen extends Screen {
     }
 
     public ItemPickerScreen(Screen parent, Consumer<Item> callback, boolean blocksOnly) {
-        super(Component.literal(blocksOnly ? "§8Выбор фона" : "§8Выбор иконки"));
+        super(Component.translatable(blocksOnly ? "advwp.picker.background.title" : "advwp.picker.icon.title"));
         this.parent = parent;
         this.callback = callback;
         this.blocksOnly = blocksOnly;
@@ -85,7 +85,7 @@ public class ItemPickerScreen extends Screen {
 
         int sw = Math.min(panelW - 20, 200);
         searchField = addRenderableWidget(new EditBox(font, panelX + (panelW - sw) / 2, panelY + 18, sw, 16, Component.literal("")));
-        searchField.setHint(Component.literal(blocksOnly ? "Поиск фона" : "Поиск предмета"));
+        searchField.setHint(Component.translatable(blocksOnly ? "advwp.hint.search.background" : "advwp.hint.search.item"));
         searchField.setResponder(t -> { filter(); scrollRow = 0; scrollProg = 0; });
         setInitialFocus(searchField);
         filter();

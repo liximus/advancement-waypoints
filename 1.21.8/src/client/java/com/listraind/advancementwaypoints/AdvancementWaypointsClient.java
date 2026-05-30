@@ -1,12 +1,14 @@
 package com.listraind.advancementwaypoints;
 
 import com.listraind.advancementwaypoints.api.IAdvancementInjector;
+import com.listraind.advancementwaypoints.config.WaypointStorage;
 import com.listraind.advancementwaypoints.gui.MainMenuScreen;
 import com.listraind.advancementwaypoints.navigator.Navigator;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.KeyMapping;
@@ -21,21 +23,20 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         Navigator.getInstance().initHud();
-        // Debug: indicate client-side init
         if (AdvancementWaypoints.LOGGER != null) AdvancementWaypoints.LOGGER.info("Advancement Waypoints client initialized");
 
         KeyMapping openKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "открыть меню",
+                "advwp.key.open_menu",
                 InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_J,
-                "Advancement Waypoints"
+                InputConstants.UNKNOWN.getValue(),
+                "advwp.key.category"
         ));
 
         KeyMapping clearNavKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "очистить навигатор",
+                "advwp.key.clear_nav",
                 InputConstants.Type.KEYSYM,
                 InputConstants.UNKNOWN.getValue(),
-                "Advancement Waypoints"
+                "advwp.key.category"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -53,6 +54,13 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
         });
 
         Commands.initialize();
+
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            WaypointStorage.setLastParent(null);
+            Navigator nav = Navigator.getInstance();
+            nav.clearAll();
+            nav.setCurrentId(null);
+        });
 
 
 

@@ -18,7 +18,7 @@ public class EditWaypointScreen extends WaypointFormScreen {
     private final String originalId;
 
     public EditWaypointScreen(JsonObject data) {
-        super(Component.literal("§8Редактирование вейпоинта"));
+        super(Component.translatable("advwp.edit.title"));
         this.originalId = ConfigIO.str(data, "id", "");
         this.isVanilla = !originalId.startsWith("advwaypoints:");
 
@@ -61,11 +61,11 @@ public class EditWaypointScreen extends WaypointFormScreen {
     @Override
     protected void initActions(int cx, int y) {
         if (isVanilla) {
-            addRenderableWidget(Button.builder(Component.literal("§7Только просмотр"), b -> {}).bounds(cx - 105, y, 210, BUTTON_HEIGHT).build());
+            addRenderableWidget(Button.builder(Component.translatable("advwp.button.read_only"), b -> {}).bounds(cx - 105, y, 210, BUTTON_HEIGHT).build());
             return;
         }
 
-        addRenderableWidget(Button.builder(Component.literal("§aСохранить"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("advwp.button.save"), b -> {
             String name = colorCodes(nameField.getValue().trim());
             if (name.isEmpty()) name = "waypoint";
             String bg = getBackgroundValue();
@@ -83,7 +83,7 @@ public class EditWaypointScreen extends WaypointFormScreen {
             minecraft.setScreen(null);
         }).bounds(cx - 105, y, 100, BUTTON_HEIGHT).build());
 
-        addRenderableWidget(Button.builder(Component.literal("§cУдалить"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("advwp.button.delete"), b -> {
             WaypointStorage.deleteWaypoint(originalId);
             minecraft.setScreen(null);
         }).bounds(cx + 5, y, 100, BUTTON_HEIGHT).build());

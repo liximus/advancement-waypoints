@@ -19,11 +19,11 @@ public class MainMenuScreen extends Screen {
 
 
     public MainMenuScreen() {
-        super(Component.literal("§8Меню вейпоинтов"));
+        super(Component.translatable("advwp.menu.title"));
     }
 
     public MainMenuScreen(Screen parent) {
-        super(Component.literal("§8Меню вейпоинтов"));
+        super(Component.translatable("advwp.menu.title"));
     }
 
     public static void setDarkMode(boolean darkMode) {
@@ -37,11 +37,11 @@ public class MainMenuScreen extends Screen {
         int bw = W - 40;
         int bx = cx + 20;
 
-        addRenderableWidget(Button.builder(Component.literal("Создать"), b ->
+        addRenderableWidget(Button.builder(Component.translatable("advwp.menu.create"), b ->
                 minecraft.setScreen(new CreateWaypointScreen())
         ).bounds(bx, cy + 25, bw, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("Редактировать"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("advwp.menu.edit"), b -> {
             if (minecraft == null || minecraft.player == null || minecraft.player.connection == null) return;
             minecraft.setScreen(new AdvancementsScreen(minecraft.player.connection.getAdvancements(), this));
 

@@ -51,11 +51,15 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
     public void advWaypoint_inject() {
         try {
             if (!injected.isEmpty()) {
+                Set<ResourceLocation> present = new HashSet<>();
                 for (ResourceLocation id : injected) {
                     AdvancementNode n = tree.get(id);
-                    if (n != null) progress.remove(n.holder());
+                    if (n != null) {
+                        progress.remove(n.holder());
+                        present.add(id);
+                    }
                 }
-                tree.remove(injected);
+                if (!present.isEmpty()) tree.remove(present);
                 injected.clear();
             }
 
