@@ -1,0 +1,45 @@
+{
+  "advwp.menu.title": "§8Меню вейпоинтов",
+  "advwp.menu.create": "Создать",
+  "advwp.menu.edit": "Редактировать",
+
+  "advwp.create.title": "§8Создание вейпоинта",
+  "advwp.edit.title": "§8Редактирование вейпоинта",
+
+  "advwp.button.create_save": "§aСоздать",
+  "advwp.button.save": "§aСохранить",
+  "advwp.button.delete": "§cУдалить",
+  "advwp.button.read_only": "§7Только просмотр",
+  "advwp.button.modbutton.tooltip": "Меню вэйпоинтов",
+
+  "advwp.field.icon": "Иконка: %s",
+  "advwp.field.parent": "Parent: %s",
+  "advwp.field.parent.none": "нет §3(вкладка)",
+  "advwp.field.parent.reset": "X",
+  "advwp.field.background": "Фон: %s",
+  "advwp.field.background.default": "stone (по умолч., не выбран)",
+
+  "advwp.coord.row.delete": "Удалить",
+  "advwp.coord.row.fill": "Текущие",
+  "advwp.coord.row.add": "Добавить координаты",
+
+  "advwp.hint.name": "Название...",
+  "advwp.hint.description": "Описание...",
+  "advwp.hint.search.item": "Поиск предмета",
+  "advwp.hint.search.background": "Поиск фона",
+
+  "advwp.picker.icon.title": "§8Выбор иконки",
+  "advwp.picker.background.title": "§8Выбор фона",
+  "advwp.picker.dimension.title": "§8Выберите измерение",
+
+  "advwp.dim.overworld": "§2Верхний мир",
+  "advwp.dim.nether_roof": "§4Крыша ада",
+  "advwp.dim.nether": "§cАд",
+  "advwp.dim.end": "§eЭнд",
+
+  "advwp.parent.none": "нет",
+
+  "advwp.key.category": "Advancement Waypoints",
+  "advwp.key.open_menu": "Открыть меню",
+  "advwp.key.clear_nav": "Очистить навигатор"
+}

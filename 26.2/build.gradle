@@ -1,0 +1,93 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// Репозитории для внешних зависимостей (если понадобятся)
+	mavenCentral()
+}
+
+def localProps = new Properties()
+def localFile = rootProject.file('local.properties')
+if (localFile.exists()) {
+	localProps.load(localFile.newInputStream())
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"advancement-waypoints" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	// Скачивание клиента/сервера Minecraft
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+
+	// В 26.2 нет маппингов — строка mappings полностью удалена!
+
+	// Для необфусцированных версий 26.x используются обычные implementation / compileOnly
+	// вместо modImplementation / modCompileOnly
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Локальная зависимость (если используете файл из папки libs)
+	compileOnly files("libs/BetterAdvancements-Fabric-xxx.jar")
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version
+	}
+}
+
+// Настройка Java 25
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	withSourcesJar()
+
+	// Синхронизируем целевую версию Java до 25
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	inputs.property "archivesName", project.base.archivesName
+
+	from("LICENSE") {
+		rename { "${it}_${inputs.properties.archivesName}"}
+	}
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name
+			from components.java
+		}
+	}
+	repositories {
+		// Репозитории для публикации мода
+	}
+}
+
+if (file('local.gradle').exists()) {
+	apply from: 'local.gradle'
+}

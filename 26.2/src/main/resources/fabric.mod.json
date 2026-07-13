@@ -1,0 +1,48 @@
+{
+	"schemaVersion": 1,
+	"id": "advancement-waypoints",
+	"version": "${version}",
+	"environment": "client",
+	"license": "MIT",
+	"name": "Advancement Waypoints",
+	"description": "Add waypoints to your advancements",
+	"icon": "assets/advancement-waypoints/icon.png",
+	"authors": [
+		"Liximus"
+	],
+	"contact": {
+		"sources": "https://github.com/liximus/advancement-waypoints"
+	},
+	"entrypoints": {
+		"main": [
+			"com.listraind.advancementwaypoints.AdvancementWaypoints"
+		],
+		"client": [
+			"com.listraind.advancementwaypoints.AdvancementWaypointsClient"
+		]
+	},
+	"mixins": [
+		"advancement-waypoints.mixins.json",
+		{
+			"config": "advancement-waypoints.client.mixins.json",
+			"environment": "client"
+		},
+		{
+			"config": "advancement-waypoints.compat.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.discord": "https://discord.com/users/673754286538227743"
+			}
+		}
+	}
+}

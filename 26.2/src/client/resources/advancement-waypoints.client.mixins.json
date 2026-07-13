@@ -1,0 +1,18 @@
+{
+	"required": true,
+	"package": "com.listraind.advancementwaypoints.mixin.client",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ClientAdvancementsMixin",
+		"AdvancementTabAccessor",
+		"AdvancementTabMixin",
+		"AdvancementWidgetAccessor",
+		"AdvancementsScreenMixin",
+		"DisplayInfoAccessor",
+		"MinecraftMixin",
+		"AdvancementWidgetMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

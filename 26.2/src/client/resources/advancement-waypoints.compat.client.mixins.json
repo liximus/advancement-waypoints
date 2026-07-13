@@ -1,0 +1,15 @@
+{
+	"required": false,
+	"package": "com.listraind.advancementwaypoints.mixin.compat",
+	"compatibilityLevel": "JAVA_25",
+	"plugin": "com.listraind.advancementwaypoints.mixin.compat.BetterAdvancementsMixinPlugin",
+	"client": [
+		"BetterAdvancementsScreenMixin",
+		"BetterAdvancementTabMixin",
+		"BetterAdvancementTabAccessor",
+		"BetterAdvancementWidgetMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}
