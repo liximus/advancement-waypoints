@@ -46,18 +46,7 @@ public class BetterAdvancementWidgetMixin implements IBetterAdvancementWidget {
     )
     private void redirectBlitSprite(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
                                     Identifier sprite, int x, int y, int width, int height, int color) {
-        Identifier currentId = Navigator.getInstance().getCurrentId();
-        Identifier finalSprite = sprite;
-
-        if (currentId != null && currentId.equals(advancementNode.holder().id())) {
-            switch (displayInfo.getType()) {
-                case TASK -> finalSprite = TASK_SELECTED;
-                case GOAL -> finalSprite = GOAL_SELECTED;
-                case CHALLENGE -> finalSprite = CHALLENGE_SELECTED;
-            }
-        }
-
-        guiGraphics.blitSprite(pipeline, finalSprite, x, y, width, height, color);
+        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height, color);
     }
 
     @Redirect(
@@ -70,18 +59,18 @@ public class BetterAdvancementWidgetMixin implements IBetterAdvancementWidget {
     )
     private void redirectBlitSpriteHover(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
                                          Identifier sprite, int x, int y, int width, int height, int color) {
+        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height, color);
+    }
+
+    @Unique
+    private Identifier resolveSprite(Identifier original) {
         Identifier currentId = Navigator.getInstance().getCurrentId();
-        Identifier finalSprite = sprite;
-
-        if (currentId != null && currentId.equals(advancementNode.holder().id())) {
-            switch (displayInfo.getType()) {
-                case TASK -> finalSprite = TASK_SELECTED;
-                case GOAL -> finalSprite = GOAL_SELECTED;
-                case CHALLENGE -> finalSprite = CHALLENGE_SELECTED;
-            }
-        }
-
-        guiGraphics.blitSprite(pipeline, finalSprite, x, y, width, height, color);
+        if (currentId == null || !currentId.equals(advancementNode.holder().id())) return original;
+        return switch (displayInfo.getType()) {
+            case TASK -> TASK_SELECTED;
+            case GOAL -> GOAL_SELECTED;
+            case CHALLENGE -> CHALLENGE_SELECTED;
+        };
     }
 
     @Shadow

@@ -11,7 +11,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -73,18 +72,51 @@ public abstract class WaypointFormScreen extends Screen {
         return selectedParentId == null && !isVanilla;
     }
 
+    
+    protected boolean isTabMode() {
+        return false;
+    }
+
+    
+    protected boolean showResetParentButton() {
+        return true;
+    }
+
+    
+    protected boolean hideFieldsUntilParentSelected() {
+        return false;
+    }
+
     @Override
     protected void init() {
         int padding = 12, gap = 4, coordRowHeight = 36, coordRowGap = 10;
 
         boolean root = isRoot();
+        boolean tab = isTabMode();
+        
+        boolean showParentField = !tab;
+        
+        boolean awaitingParent = hideFieldsUntilParentSelected() && selectedParentId == null && !isVanilla;
+        boolean showFormFields = !awaitingParent;
+        boolean showBackground = root && showFormFields;
+        boolean showCoords = !root && showFormFields;
 
-        int totalContentHeight = padding + 14 + gap + FIELD_HEIGHT + gap + FIELD_HEIGHT + gap + FIELD_HEIGHT + gap;
-        if (root) totalContentHeight += FIELD_HEIGHT + gap;
-        totalContentHeight += FIELD_HEIGHT + 13;
-        if (!root && !coordRows.isEmpty()) totalContentHeight += coordRows.size() * (coordRowHeight + coordRowGap);
-        if (!root) totalContentHeight += BUTTON_HEIGHT + 13;
-        totalContentHeight += BUTTON_HEIGHT + padding;
+        int totalContentHeight = padding + 14 + gap;
+        if (showFormFields) {
+            totalContentHeight += FIELD_HEIGHT + gap;   
+            totalContentHeight += FIELD_HEIGHT + gap;   
+        }
+        if (showParentField) totalContentHeight += FIELD_HEIGHT + gap;   
+        if (showBackground) totalContentHeight += FIELD_HEIGHT + gap;    
+        if (showFormFields) {
+            totalContentHeight += FIELD_HEIGHT;        
+            totalContentHeight += 13;                   
+        }
+        if (showCoords) {
+            if (!coordRows.isEmpty()) totalContentHeight += coordRows.size() * (coordRowHeight + coordRowGap);
+            totalContentHeight += BUTTON_HEIGHT + 13;   
+        }
+        totalContentHeight += BUTTON_HEIGHT + padding;   
 
         scale = Math.min(1f, (float) (height - 10) / totalContentHeight);
         virtualWidth = (int) (width / scale);
@@ -99,37 +131,48 @@ public abstract class WaypointFormScreen extends Screen {
         int fieldLeft = centerX - fieldWidth / 2;
         int currentY = panelY + padding + 14 + gap;
 
-        nameField = addBox(fieldLeft, currentY, fieldWidth, "advwp.hint.name", savedName);
-        currentY += FIELD_HEIGHT + gap;
-
         int buttonWidth = fieldWidth - 25;
-        iconButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.icon", iconId()), b -> {
-            saveState();
-            setFocused(null);
-            minecraft.gui.setScreen(new ItemPickerScreen(this, item -> selectedIcon = item));
-        }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
-        currentY += FIELD_HEIGHT + gap;
 
-        Component parentDisplayName = selectedParentId != null ? Component.literal(parentName()) : Component.translatable("advwp.field.parent.none");
-        parentButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.parent", parentDisplayName), b -> {
-            saveState();
-            setFocused(null);
-            hadParentBefore = selectedParentId != null;
-            openParentPicker();
-        }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
-        parentButton.active = !isVanilla;
+        if (showFormFields) {
+            nameField = addBox(fieldLeft, currentY, fieldWidth, "advwp.hint.name", savedName);
+            currentY += FIELD_HEIGHT + gap;
 
-        Button resetParentButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.parent.reset"), b -> {
-            selectedParentId = null;
-            parentButton.setMessage(Component.translatable("advwp.field.parent", Component.translatable("advwp.field.parent.none")));
-            saveState();
-            rebuildWidgets();
-        }).bounds(fieldLeft + buttonWidth + 5, currentY, 20, FIELD_HEIGHT).build());
-        resetParentButton.active = !isVanilla;
-        currentY += FIELD_HEIGHT + gap;
+            iconButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.icon", iconId()), b -> {
+                saveState();
+                setFocused(null);
+                minecraft.gui.setScreen(new ItemPickerScreen(this, item -> selectedIcon = item));
+            }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
+            currentY += FIELD_HEIGHT + gap;
+        }
 
-        if (root) {
-            Component backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? Component.literal(shortBgName(savedBackground)) : Component.translatable("advwp.field.background.default");
+        if (showParentField) {
+            Component parentDisplayName = selectedParentId != null
+                    ? Component.literal(parentName())
+                    : Component.translatable(awaitingParent ? "advwp.field.parent.select" : "advwp.field.parent.none");
+            parentButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.parent", parentDisplayName), b -> {
+                saveState();
+                setFocused(null);
+                hadParentBefore = selectedParentId != null;
+                openParentPicker();
+            }).bounds(fieldLeft, currentY, buttonWidth, FIELD_HEIGHT).build());
+            parentButton.active = !isVanilla;
+
+            if (showResetParentButton()) {
+                Button resetParentButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.parent.reset"), b -> {
+                    selectedParentId = null;
+                    parentButton.setMessage(Component.translatable("advwp.field.parent", Component.translatable("advwp.field.parent.none")));
+                    saveState();
+                    rebuildWidgets();
+                }).bounds(fieldLeft + buttonWidth + 5, currentY, 20, FIELD_HEIGHT).build());
+                resetParentButton.active = !isVanilla;
+            }
+            currentY += FIELD_HEIGHT + gap;
+        }
+
+        if (showBackground) {
+            Component backgroundLabel = savedBackground != null && !savedBackground.isEmpty()
+                    ? Component.literal(shortBgName(savedBackground))
+                    : Component.translatable("advwp.field.background.default");
             bgButton = addRenderableWidget(Button.builder(Component.translatable("advwp.field.background", backgroundLabel), b -> {
                 saveState();
                 setFocused(null);
@@ -145,15 +188,17 @@ public abstract class WaypointFormScreen extends Screen {
             bgButton = null;
         }
 
-        descField = addBox(fieldLeft, currentY, fieldWidth, "advwp.hint.description", savedDesc);
-        descField.setMaxLength(512);
-        currentY += FIELD_HEIGHT;
+        if (showFormFields) {
+            descField = addBox(fieldLeft, currentY, fieldWidth, "advwp.hint.description", savedDesc);
+            descField.setMaxLength(512);
+            currentY += FIELD_HEIGHT;
 
-        currentY += 6;
-        separator1Y = currentY;
-        currentY += 7;
+            currentY += 6;
+            separator1Y = currentY;
+            currentY += 7;
+        }
 
-        if (!root) {
+        if (showCoords) {
             int coordRowTotalWidth = COORD_FIELD_WIDTH * 3 + GAP * 2;
             int coordRowLeft = centerX - (coordRowTotalWidth + GAP + FILL_BUTTON_WIDTH) / 2;
 
@@ -242,18 +287,22 @@ public abstract class WaypointFormScreen extends Screen {
         super.extractRenderState(graphics, scaledMouseX, scaledMouseY, delta);
 
         graphics.text(font, title, panelX + panelWidth / 2 - font.width(title) / 2, panelY + 8, 0xFF222222, false);
-        iconButton.setMessage(Component.translatable("advwp.field.icon", iconId()));
+        if (iconButton != null) {
+            iconButton.setMessage(Component.translatable("advwp.field.icon", iconId()));
+            graphics.item(new ItemStack(selectedIcon), iconButton.getX() + iconButton.getWidth() + 7, iconButton.getY() + 1);
+        }
         if (bgButton != null) {
             Component backgroundLabel = savedBackground != null && !savedBackground.isEmpty() ? Component.literal(shortBgName(savedBackground)) : Component.translatable("advwp.field.background.default");
             bgButton.setMessage(Component.translatable("advwp.field.background", backgroundLabel));
         }
-        graphics.item(new ItemStack(selectedIcon), iconButton.getX() + iconButton.getWidth() + 7, iconButton.getY() + 1);
-        graphics.fill(panelX + 15, separator1Y, panelX + panelWidth - 15, separator1Y + 1, 0xFF777777);
-        if (separator2Y != separator1Y) {
-            graphics.fill(panelX + 15, separator2Y, panelX + panelWidth - 15, separator2Y + 1, 0xFF777777);
+        if (separator1Y != 0) {
+            graphics.fill(panelX + 15, separator1Y, panelX + panelWidth - 15, separator1Y + 1, 0xFF777777);
+            if (separator2Y != separator1Y) {
+                graphics.fill(panelX + 15, separator2Y, panelX + panelWidth - 15, separator2Y + 1, 0xFF777777);
+            }
         }
 
-        if (!isRoot()) {
+        if (!isRoot() && selectedParentId != null) {
             int coordRowTotalWidth = COORD_FIELD_WIDTH * 3 + GAP * 2;
             int coordRowLeft = panelX + panelWidth / 2 - (coordRowTotalWidth + GAP + FILL_BUTTON_WIDTH) / 2;
             for (CoordRow coordRow : coordRows) {

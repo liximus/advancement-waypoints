@@ -15,7 +15,7 @@ public class Navigator {
 
     private static Navigator INSTANCE;
     private final Map<Dimension, List<BlockPos>> targets = new EnumMap<>(Dimension.class);
-    private Identifier currId = null;
+    private Identifier currentId = null;
 
     public enum Dimension {
         OVERWORLD, NETHER, END;
@@ -59,24 +59,20 @@ public class Navigator {
         if (list == null || list.isEmpty()) return null;
         if (list.size() == 1) return list.get(0);
         BlockPos nearest = null;
-        long min = Long.MAX_VALUE;
-        for (BlockPos p : list) {
-            if (p == null) continue;
-            long dx = (long) p.getX() - from.getX();
-            long dz = (long) p.getZ() - from.getZ();
+        long minDistSq = Long.MAX_VALUE;
+        for (BlockPos pos : list) {
+            if (pos == null) continue;
+            long dx = (long) pos.getX() - from.getX();
+            long dz = (long) pos.getZ() - from.getZ();
             long distSq = dx * dx + dz * dz;
-            if (distSq < min) {
-                min = distSq;
-                nearest = p;
-            } else if (distSq == min) {
-                if (nearest == null) {
-                    nearest = p;
-                } else {
-                    if (p.getX() < nearest.getX() ||
-                            (p.getX() == nearest.getX() && (p.getZ() < nearest.getZ() ||
-                                    (p.getZ() == nearest.getZ() && p.getY() < nearest.getY())))) {
-                        nearest = p;
-                    }
+            if (distSq < minDistSq) {
+                minDistSq = distSq;
+                nearest = pos;
+            } else if (distSq == minDistSq && nearest != null) {
+                if (pos.getX() < nearest.getX() ||
+                        (pos.getX() == nearest.getX() && (pos.getZ() < nearest.getZ() ||
+                                (pos.getZ() == nearest.getZ() && pos.getY() < nearest.getY())))) {
+                    nearest = pos;
                 }
             }
         }
@@ -92,10 +88,10 @@ public class Navigator {
     }
 
     public void setCurrentId(Identifier id) {
-        currId = id;
+        currentId = id;
     }
 
     public Identifier getCurrentId() {
-        return currId;
+        return currentId;
     }
 }

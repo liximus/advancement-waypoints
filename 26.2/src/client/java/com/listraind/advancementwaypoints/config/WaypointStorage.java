@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class WaypointStorage {
 
@@ -39,14 +40,14 @@ public class WaypointStorage {
         List<Path> jsonFiles;
         try (var stream = Files.list(waypointsFolder())) {
             jsonFiles = stream.filter(p -> p.toString().endsWith(".json"))
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             return null;
         }
-        for (Path p : jsonFiles) {
-            List<JsonObject> contents = ConfigIO.readArray(p);
+        for (Path file : jsonFiles) {
+            List<JsonObject> contents = ConfigIO.readArray(file);
             if (contents.stream().anyMatch(o -> id.equals(ConfigIO.str(o, "id", "")))) {
-                return p;
+                return file;
             }
         }
         return null;
@@ -155,10 +156,10 @@ public class WaypointStorage {
         if (mc.player != null) {
             AdvancementNode node = mc.player.connection.getAdvancements().getTree().get(id);
             if (node != null && node.holder().value().display().isPresent()) {
-                var d = node.holder().value().display().get();
-                result.addProperty("title", d.getTitle().getString());
-                result.addProperty("description", d.getDescription().getString());
-                Identifier iconId = BuiltInRegistries.ITEM.getKey(d.getIcon().item().value());
+                var display = node.holder().value().display().get();
+                result.addProperty("title", display.getTitle().getString());
+                result.addProperty("description", display.getDescription().getString());
+                Identifier iconId = BuiltInRegistries.ITEM.getKey(display.getIcon().item().value());
                 result.addProperty("icon", iconId != null ? iconId.toString() : "minecraft:stone");
                 if (node.parent() != null) {
                     result.addProperty("parent", node.parent().holder().id().toString());
@@ -193,7 +194,7 @@ public class WaypointStorage {
         return lastParent;
     }
 
-    public static void setLastParent(Identifier p) {
-        lastParent = p;
+    public static void setLastParent(Identifier parent) {
+        lastParent = parent;
     }
 }

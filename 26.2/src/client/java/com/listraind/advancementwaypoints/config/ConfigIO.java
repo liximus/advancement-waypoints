@@ -80,17 +80,17 @@ public class ConfigIO {
             Path tmp = path.resolveSibling(path.getFileName().toString() + ".tmp");
             Files.writeString(tmp, GSON.toJson(root), StandardCharsets.UTF_8);
             try {
-                Files.move(tmp, path, java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            } catch (java.nio.file.AtomicMoveNotSupportedException ame) {
-                Files.move(tmp, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                Files.move(tmp, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception e) {
             AdvancementWaypoints.LOGGER.error("Write error: {}", path, e);
         }
     }
 
-    public static String str(JsonObject o, String key, String def) {
-        return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : def;
+    public static String str(JsonObject o, String key, String defaultValue) {
+        return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : defaultValue;
     }
 
     public static String nullable(JsonObject o, String key) {
@@ -101,17 +101,17 @@ public class ConfigIO {
         Minecraft mc = Minecraft.getInstance();
         String raw;
         if (mc.getCurrentServer() != null) {
-            var s = mc.getCurrentServer();
-            raw = "server:" + s.name + "|" + s.ip;
+            var server = mc.getCurrentServer();
+            raw = "server:" + server.name + "|" + server.ip;
         } else if (mc.getSingleplayerServer() != null) {
             raw = "single:" + mc.getSingleplayerServer().getWorldPath(LevelResource.ROOT).toString();
         } else {
             raw = "unknown";
         }
         try {
-            byte[] d = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 16; i++) sb.append(String.format("%02x", d[i]));
+            for (int i = 0; i < 16; i++) sb.append(String.format("%02x", digest[i]));
             return sb.toString();
         } catch (Exception e) {
             return String.valueOf(raw.hashCode());

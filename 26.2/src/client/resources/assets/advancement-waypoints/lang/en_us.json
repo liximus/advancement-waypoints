@@ -1,9 +1,11 @@
 {
   "advwp.menu.title": "§8Waypoints menu",
-  "advwp.menu.create": "Create",
+  "advwp.menu.create_waypoint": "Create waypoint",
+  "advwp.menu.create_tab": "Create tab",
   "advwp.menu.edit": "Edit",
 
   "advwp.create.title": "§8Create waypoint",
+  "advwp.create.tab.title": "§8Create tab",
   "advwp.edit.title": "§8Edit waypoint",
 
   "advwp.button.create_save": "§aCreate",
@@ -15,6 +17,7 @@
   "advwp.field.icon": "Icon: %s",
   "advwp.field.parent": "Parent: %s",
   "advwp.field.parent.none": "none §3(tab)",
+  "advwp.field.parent.select": "§eselect...",
   "advwp.field.parent.reset": "X",
   "advwp.field.background": "Background: %s",
   "advwp.field.background.default": "stone (default, not set)",

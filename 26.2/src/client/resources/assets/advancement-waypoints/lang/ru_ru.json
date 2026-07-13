@@ -1,9 +1,11 @@
 {
   "advwp.menu.title": "§8Меню вейпоинтов",
-  "advwp.menu.create": "Создать",
+  "advwp.menu.create_waypoint": "Создать вейпоинт",
+  "advwp.menu.create_tab": "Создать вкладку",
   "advwp.menu.edit": "Редактировать",
 
   "advwp.create.title": "§8Создание вейпоинта",
+  "advwp.create.tab.title": "§8Создание вкладки",
   "advwp.edit.title": "§8Редактирование вейпоинта",
 
   "advwp.button.create_save": "§aСоздать",
@@ -15,6 +17,7 @@
   "advwp.field.icon": "Иконка: %s",
   "advwp.field.parent": "Parent: %s",
   "advwp.field.parent.none": "нет §3(вкладка)",
+  "advwp.field.parent.select": "§eвыберите...",
   "advwp.field.parent.reset": "X",
   "advwp.field.background": "Фон: %s",
   "advwp.field.background.default": "stone (по умолч., не выбран)",

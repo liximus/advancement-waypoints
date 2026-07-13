@@ -9,8 +9,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
-import betteradvancements.fabric.config.ConfigFileHandler;
-
 import java.util.List;
 
 public class EditWaypointScreen extends WaypointFormScreen {

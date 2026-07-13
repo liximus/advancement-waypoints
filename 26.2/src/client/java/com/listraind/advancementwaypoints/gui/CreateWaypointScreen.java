@@ -10,11 +10,33 @@ import java.util.Objects;
 
 public class CreateWaypointScreen extends WaypointFormScreen {
 
+    
+    private final boolean tab;
     private boolean initialized = false;
 
-    public CreateWaypointScreen() {
-        super(Component.translatable("advwp.create.title"));
-        selectedParentId = WaypointStorage.getLastParent();
+    public CreateWaypointScreen(boolean tab) {
+        super(Component.translatable(tab ? "advwp.create.tab.title" : "advwp.create.title"));
+        this.tab = tab;
+        
+        selectedParentId = tab ? null : WaypointStorage.getLastParent();
+    }
+
+    @Override
+    protected boolean isTabMode() {
+        return tab;
+    }
+
+    @Override
+    protected boolean showResetParentButton() {
+        
+        return false;
+    }
+
+    @Override
+    protected boolean hideFieldsUntilParentSelected() {
+        
+        
+        return !tab;
     }
 
     @Override
@@ -33,7 +55,7 @@ public class CreateWaypointScreen extends WaypointFormScreen {
     @Override
     protected void init() {
         if (!initialized) {
-            if (selectedParentId != null && coordRows.isEmpty()) {
+            if (!tab && selectedParentId != null && coordRows.isEmpty()) {
                 CoordRow cr = new CoordRow(currentDim());
                 if (minecraft != null && minecraft.player != null) {
                     cr.sx = String.valueOf((int) minecraft.player.getX());
@@ -52,7 +74,7 @@ public class CreateWaypointScreen extends WaypointFormScreen {
         saveState();
         selectedParentId = newParent;
         hadParentBefore = true;
-        minecraft.gui.setScreen(new CreateWaypointScreen());
+        minecraft.gui.setScreen(new CreateWaypointScreen(tab));
         if (coordRows.isEmpty()) {
             CoordRow cr = new CoordRow(currentDim());
             if (minecraft != null && minecraft.player != null) {
@@ -66,9 +88,12 @@ public class CreateWaypointScreen extends WaypointFormScreen {
 
     @Override
     protected void initActions(int cx, int y) {
-        addRenderableWidget(Button.builder(Component.translatable("advwp.button.create_save"), b -> {
+        
+        boolean canCreate = tab || selectedParentId != null;
+
+        Button createButton = Button.builder(Component.translatable("advwp.button.create_save"), b -> {
             String name = colorCodes(nameField.getValue().trim());
-            if (name.isEmpty()) name = "waypoint";
+            if (name.isEmpty()) name = tab ? "tab" : "waypoint";
 
             String id = "advwaypoints:wp_" + (System.currentTimeMillis() % 10000000);
             String desc = buildFinalDescription();
@@ -86,6 +111,8 @@ public class CreateWaypointScreen extends WaypointFormScreen {
             WaypointStorage.saveOrUpdateWaypoint(entry);
             WaypointStorage.setLastParent(Identifier.parse(id));
             minecraft.gui.setScreen(null);
-        }).bounds(cx - 50, y, 100, BUTTON_HEIGHT).build());
+        }).bounds(cx - 50, y, 100, BUTTON_HEIGHT).build();
+        createButton.active = canCreate;
+        addRenderableWidget(createButton);
     }
 }

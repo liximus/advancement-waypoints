@@ -5,23 +5,14 @@ import com.listraind.advancementwaypoints.gui.ItemPickerScreen;
 import com.listraind.advancementwaypoints.gui.MainMenuScreen;
 import com.listraind.advancementwaypoints.gui.WaypointFormScreen;
 import net.minecraft.client.Minecraft;
-import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.Pack;
 
-import java.util.Collection;
-
 public class DarkModeChecker {
+
     public static boolean isDarkModeEnabled() {
-        Minecraft mc = Minecraft.getInstance();
-        PackRepository packRepo = mc.getResourcePackRepository();
-
-        Collection<Pack> selectedPacks = packRepo.getSelectedPacks();
-
-        for (Pack pack : selectedPacks) {
-            String id = pack.getId();
-            String title = pack.getTitle().getString();
-
-            if (title.toLowerCase().contains("dark") || id.toLowerCase().contains("dark")) {
+        for (Pack pack : Minecraft.getInstance().getResourcePackRepository().getSelectedPacks()) {
+            if (pack.getTitle().getString().toLowerCase().contains("dark")
+                    || pack.getId().toLowerCase().contains("dark")) {
                 return true;
             }
         }
@@ -29,11 +20,10 @@ public class DarkModeChecker {
     }
 
     public static void setModDarkMode() {
-        boolean dm = isDarkModeEnabled();
-        WaypointFormScreen.setDarkMode(dm);
-        ItemPickerScreen.setDarkMode(dm);
-        DimensionPickerScreen.setDarkMode(dm);
-        MainMenuScreen.setDarkMode(dm);
+        boolean darkMode = isDarkModeEnabled();
+        WaypointFormScreen.setDarkMode(darkMode);
+        ItemPickerScreen.setDarkMode(darkMode);
+        DimensionPickerScreen.setDarkMode(darkMode);
+        MainMenuScreen.setDarkMode(darkMode);
     }
-
 }

@@ -14,19 +14,17 @@ import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
-
-import static com.listraind.advancementwaypoints.AdvancementWaypoints.MOD_ID;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.lwjgl.glfw.GLFW;
+
+import static com.listraind.advancementwaypoints.AdvancementWaypoints.MOD_ID;
 
 public class AdvancementWaypointsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
         Navigator.getInstance().initHud();
-        if (AdvancementWaypoints.LOGGER != null)
-            AdvancementWaypoints.LOGGER.info("Advancement Waypoints client initialized");
 
         KeyMapping.Category keyCategory = new KeyMapping.Category(Identifier.fromNamespaceAndPath(MOD_ID, "key_category"));
 
@@ -46,16 +44,10 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openKey.consumeClick()) {
-                client.execute(() -> {
-                    client.gui.setScreen(new MainMenuScreen());
-                });
-                if (AdvancementWaypoints.LOGGER != null)
-                    AdvancementWaypoints.LOGGER.info("Opened MainMenuScreen via keybind");
+                client.execute(() -> client.gui.setScreen(new MainMenuScreen()));
             }
             while (clearNavKey.consumeClick()) {
-                Navigator nav = Navigator.getInstance();
-                nav.clearAll();
-                nav.setCurrentId(null);
+                clearNavigation();
             }
         });
 
@@ -63,17 +55,14 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             WaypointStorage.setLastParent(null);
-            Navigator nav = Navigator.getInstance();
-            nav.clearAll();
-            nav.setCurrentId(null);
+            clearNavigation();
         });
-
 
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES)
                 .registerReloadListener(new SimpleSynchronousResourceReloadListener() {
                     @Override
                     public Identifier getFabricId() {
-                        return Identifier.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "reload_listener");
+                        return Identifier.fromNamespaceAndPath(MOD_ID, "reload_listener");
                     }
 
                     @Override
@@ -81,6 +70,12 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
                         DarkModeChecker.setModDarkMode();
                     }
                 });
+    }
+
+    private static void clearNavigation() {
+        Navigator nav = Navigator.getInstance();
+        nav.clearAll();
+        nav.setCurrentId(null);
     }
 
     public static void reloadAdvancements() {

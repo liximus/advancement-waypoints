@@ -42,18 +42,7 @@ public class AdvancementWidgetMixin {
     )
     private void redirectBlitSpriteDraw(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
                                         Identifier sprite, int x, int y, int width, int height) {
-        Identifier currentId = Navigator.getInstance().getCurrentId();
-        Identifier finalSprite = sprite;
-
-        if (currentId != null && currentId.equals(advancementNode.holder().id())) {
-            switch (display.getType()) {
-                case TASK -> finalSprite = TASK_SELECTED;
-                case GOAL -> finalSprite = GOAL_SELECTED;
-                case CHALLENGE -> finalSprite = CHALLENGE_SELECTED;
-            }
-        }
-
-        guiGraphics.blitSprite(pipeline, finalSprite, x, y, width, height);
+        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height);
     }
 
     @Redirect(
@@ -66,6 +55,17 @@ public class AdvancementWidgetMixin {
     )
     private void redirectBlitSpriteHover(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
                                          Identifier sprite, int x, int y, int width, int height) {
-        redirectBlitSpriteDraw( guiGraphics,  pipeline, sprite,  x,  y,  width,  height);
+        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height);
+    }
+
+    @Unique
+    private Identifier resolveSprite(Identifier original) {
+        Identifier currentId = Navigator.getInstance().getCurrentId();
+        if (currentId == null || !currentId.equals(advancementNode.holder().id())) return original;
+        return switch (display.getType()) {
+            case TASK -> TASK_SELECTED;
+            case GOAL -> GOAL_SELECTED;
+            case CHALLENGE -> CHALLENGE_SELECTED;
+        };
     }
 }

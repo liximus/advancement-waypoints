@@ -65,6 +65,7 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
 
     @Inject(method = "init", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
+        pressBtn = -1;
         modButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
                     setFocused(null);
                     minecraft.gui.setScreen(new MainMenuScreen(this));
@@ -108,38 +109,29 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
                 ix, iy, 0f, 0f, 16, 16, 16, 16);
     }
 
-
-
     @Inject(method = "mouseClicked", at = @At("HEAD"))
     private void onPress(MouseButtonEvent event, boolean unknown, CallbackInfoReturnable<Boolean> cir) {
         pressMx = event.x();
         pressMy = event.y();
         pressBtn = event.button();
-        AdvancementWaypoints.LOGGER.info("[AW] mouseClicked captured: mx={}, my={}, btn={}", pressMx, pressMy, pressBtn);
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        AdvancementWaypoints.LOGGER.info("[AW] mouseReleased called: mx={}, my={}, btn={}, selectedTab={}",
-                event.x(), event.y(), event.button(), selectedTab);
         boolean result = super.mouseReleased(event);
-        AdvancementWaypoints.LOGGER.info("[AW] super.mouseReleased returned: {}", result);
-        advWp_handleRelease(event.x(), event.y(), event.button(), result);
+        advWp_handleRelease(event.x(), event.y(), event.button());
         return result;
     }
 
     @Unique
-    private void advWp_handleRelease(double mx, double my, int btn, boolean alreadyHandled) {
+    private void advWp_handleRelease(double mx, double my, int btn) {
         int storedBtn = pressBtn;
-        double dxPress = mx - pressMx;
-        double dyPress = my - pressMy;
+        double dx = mx - pressMx;
+        double dy = my - pressMy;
         pressBtn = -1;
-        AdvancementWaypoints.LOGGER.info("[AW] handleRelease: storedBtn={}, btn={}, dx={}, dy={}, alreadyHandled={}, selectedTab={}",
-                storedBtn, btn, dxPress, dyPress, alreadyHandled, selectedTab);
-        if (storedBtn != btn) { AdvancementWaypoints.LOGGER.info("[AW] -> FAIL: storedBtn != btn"); return; }
-        if (dxPress * dxPress + dyPress * dyPress > DRAG_THRESHOLD * DRAG_THRESHOLD) { AdvancementWaypoints.LOGGER.info("[AW] -> FAIL: drag detected"); return; }
-        if (selectedTab == null) { AdvancementWaypoints.LOGGER.info("[AW] -> FAIL: selectedTab is null"); return; }
-        if (alreadyHandled) { AdvancementWaypoints.LOGGER.info("[AW] -> FAIL: alreadyHandled"); return; }
+        if (storedBtn != btn) return;
+        if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) return;
+        if (selectedTab == null) return;
 
         AdvancementTabAccessor tab = (AdvancementTabAccessor) selectedTab;
         int contentLeft, contentTop;
@@ -148,74 +140,59 @@ public abstract class AdvancementsScreenMixin extends Screen implements IAdvance
         if (captX != 0 || captY != 0) {
             contentLeft = captX;
             contentTop = captY;
-            AdvancementWaypoints.LOGGER.info("[AW] using captured content pos from extractContents: ({}, {})", contentLeft, contentTop);
         } else {
             contentLeft = (this.width - AdvancementsScreen.WINDOW_WIDTH) / 2 + 9;
             contentTop = (this.height - AdvancementsScreen.WINDOW_HEIGHT) / 2 + 18;
-            AdvancementWaypoints.LOGGER.info("[AW] using calculated content pos: ({}, {})", contentLeft, contentTop);
         }
         int relX = (int) mx - contentLeft;
         int relY = (int) my - contentTop;
-        int sx = Mth.floor(tab.getScrollX());
-        int sy = Mth.floor(tab.getScrollY());
-        AdvancementWaypoints.LOGGER.info("[AW] contentArea: left={}, top={}, relX={}, relY={}, scroll=({},{})",
-                contentLeft, contentTop, relX, relY, sx, sy);
-        AdvancementWaypoints.LOGGER.info("[AW] widgets count: {}", tab.getWidgets().size());
+        int scrollX = Mth.floor(tab.getScrollX());
+        int scrollY = Mth.floor(tab.getScrollY());
 
         for (Object w : tab.getWidgets().values()) {
             AdvancementWidgetAccessor wa = (AdvancementWidgetAccessor) w;
-            boolean hovered = wa.invokeIsMouseOver(sx, sy, relX, relY);
+            if (!wa.invokeIsMouseOver(scrollX, scrollY, relX, relY)) continue;
+
             AdvancementNode node = wa.getAdvancementNode();
-            AdvancementWaypoints.LOGGER.info("[AW] checking widget: node={}, hovered={}", node.holder().id(), hovered);
-            if (hovered) {
-                AdvancementWaypoints.LOGGER.info("[AW] -> hovered widget found: node={}", node.holder().id());
-                AdvancementWaypoints.LOGGER.info("[AW] HOVERED! node={}, btn={}, selectMode={}", node.holder().id(), btn, selectMode);
-                node.holder().value().display().ifPresent(d -> {
-                    Identifier id = node.holder().id();
-                    AdvancementWaypoints.LOGGER.info("[AW] processing advancement: {}, desc={}", id, d.getDescription().getString());
-                    if (btn == 0) {
-                        if (selectMode) {
-                            AdvancementWaypoints.LOGGER.info("[AW] selectMode callback for {}", id);
-                            selectCallback.accept(id);
-                            Screen target = screenToOpen != null ? screenToOpen : (parentScreen != null ? parentScreen : lastScreen);
-                            minecraft.gui.setScreen(target);
+            node.holder().value().display().ifPresent(d -> {
+                Identifier id = node.holder().id();
+                if (btn == 0) {
+                    if (selectMode) {
+                        selectCallback.accept(id);
+                        Screen target = screenToOpen != null ? screenToOpen : (parentScreen != null ? parentScreen : lastScreen);
+                        minecraft.gui.setScreen(target);
+                    } else {
+                        Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
+                        Navigator nav = Navigator.getInstance();
+                        if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
+                            nav.setCurrentId(id);
+                            nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
+                            nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
+                            nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
                         } else {
-                            Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
-                            Navigator nav = Navigator.getInstance();
-                            if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
-                                nav.setCurrentId(id);
-                                nav.setTargets(Navigator.Dimension.OVERWORLD, targets.get(Navigator.Dimension.OVERWORLD));
-                                nav.setTargets(Navigator.Dimension.NETHER, targets.get(Navigator.Dimension.NETHER));
-                                nav.setTargets(Navigator.Dimension.END, targets.get(Navigator.Dimension.END));
-                                AdvancementWaypoints.LOGGER.info("[AW] set navigation target to {}", id);
-                            } else {
-                                nav.clearAll();
-                                nav.setCurrentId(null);
-                                AdvancementWaypoints.LOGGER.info("[AW] cleared navigation");
-                            }
-                            if (targets != null) Minecraft.getInstance().gui.setScreen(null);
+                            nav.clearAll();
+                            nav.setCurrentId(null);
                         }
-                    } else if (btn == 1) {
-                        Player player = Minecraft.getInstance().player;
-                        if (player == null) return;
-                        Navigator.Dimension dim = Navigator.Dimension.from(player.level().dimension());
-                        if (dim == null) return;
-                        Map<Navigator.Dimension, List<BlockPos>> parsed = CoordParser.parseForNavigation(d.getDescription().getString());
-                        if (parsed == null) return;
-                        List<BlockPos> targets = parsed.get(dim);
-                        if (targets == null) return;
-                        BlockPos target = Navigator.nearestOf(targets, player.blockPosition());
-                        if (target == null) return;
-                        String command = "tp" + " " + target.getX() + " " + target.getY() + " " + target.getZ();
-                        AdvancementWaypoints.LOGGER.info("[AW] teleporting to {}", target);
-                        Minecraft.getInstance().player.connection.sendCommand(command);
-                        Minecraft.getInstance().gui.setScreen(null);
+                        if (targets != null) Minecraft.getInstance().gui.setScreen(null);
                     }
-                });
-                break;
-            }
+                } else if (btn == 1) {
+                    Player player = Minecraft.getInstance().player;
+                    if (player == null) return;
+                    Navigator.Dimension dim = Navigator.Dimension.from(player.level().dimension());
+                    if (dim == null) return;
+                    Map<Navigator.Dimension, List<BlockPos>> parsed = CoordParser.parseForNavigation(d.getDescription().getString());
+                    if (parsed == null) return;
+                    List<BlockPos> targets = parsed.get(dim);
+                    if (targets == null) return;
+                    BlockPos target = Navigator.nearestOf(targets, player.blockPosition());
+                    if (target == null) return;
+                    String command = "tp " + target.getX() + " " + target.getY() + " " + target.getZ();
+                    Minecraft.getInstance().player.connection.sendCommand(command);
+                    Minecraft.getInstance().gui.setScreen(null);
+                }
+            });
+            break;
         }
-        AdvancementWaypoints.LOGGER.info("[AW] no widget was hovered");
     }
 
     @Override
