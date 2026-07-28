@@ -112,6 +112,14 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
+tasks.withType(Copy).configureEach {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 jar {
 	inputs.property "archivesName", project.base.archivesName
 

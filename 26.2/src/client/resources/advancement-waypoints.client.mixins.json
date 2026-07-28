@@ -12,7 +12,9 @@
 		"DisplayInfoAccessor",
 		"MinecraftMixin",
 		"AdvancementWidgetMixin",
-		"ChatComponentMixin"
+		"ChatComponentMixin",
+		"MixinLocatorBarDistance",
+		"MixinLocatorBarItem"
 	],
 	"injectors": {
 		"defaultRequire": 1

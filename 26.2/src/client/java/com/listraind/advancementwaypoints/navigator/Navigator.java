@@ -44,6 +44,10 @@ public class Navigator {
       }
    }
 
+   public @Nullable List<BlockPos> getTargetsForDimension(Dimension dim) {
+      return dim == null ? null : this.targets.get(dim);
+   }
+
    public @Nullable BlockPos getNearest(Dimension dim, BlockPos from) {
       return from == null ? null : nearestOf((List)this.targets.get(dim), from);
    }

@@ -82,8 +82,26 @@
 
   "advwp.config.title": "Advancement Waypoints Settings",
   "advwp.config.category.general": "General",
+  "advwp.config.category.navigation": "Navigation",
   "advwp.config.chat_scanner": "Chat Coordinate Scanner",
   "advwp.config.chat_scanner.desc": "Automatically detects coordinates in chat messages and makes them clickable for navigation.",
+  "advwp.config.enable_navigation": "Enable Navigation",
+  "advwp.config.enable_navigation.desc": "Globally enables or disables all navigation HUD elements.",
   "advwp.config.open_manager": "Open Waypoint Manager",
-  "advwp.config.open_manager.desc": "Open main menu for creating, editing, and managing waypoints and tabs."
+  "advwp.config.open_manager.desc": "Open main menu for creating, editing, and managing waypoints and tabs.",
+  "advwp.config.hud_mode": "Navigation Type",
+  "advwp.config.hud_mode.desc": "Choose your preferred navigation style: Arrow, Compass, or Player Locator.",
+  "advwp.config.hud_mode.arrow": "Arrow",
+  "advwp.config.hud_mode.compass": "Compass",
+  "advwp.config.hud_mode.locator": "Player Locator",
+  "advwp.config.hud_position": "Navigation Position",
+  "advwp.config.hud_position.desc": "The corner of your screen where Arrow and Compass indicators are placed.",
+  "advwp.config.hud_position.bottom_right": "Bottom Right",
+  "advwp.config.hud_position.top_right": "Top Right",
+  "advwp.config.hud_position.top_left": "Top Left",
+  "advwp.config.hud_position.bottom_left": "Bottom Left",
+  "advwp.config.show_distance_on_locator": "Show Distance Instead of XP",
+  "advwp.config.show_distance_on_locator.desc": "Displays the distance to your target in meters above the hotbar instead of your experience level.",
+  "advwp.config.show_item_on_locator": "Waypoint Item Icon on Locator",
+  "advwp.config.show_item_on_locator.desc": "Replaces the default dot on the locator with the item of your selected waypoint."
 }

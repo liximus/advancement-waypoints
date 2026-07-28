@@ -4,6 +4,7 @@ import com.listraind.advancementwaypoints.api.IAdvancementInjector;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
 import com.listraind.advancementwaypoints.gui.dialogs.MainMenuScreen;
 import com.listraind.advancementwaypoints.navigator.Navigator;
+import com.listraind.advancementwaypoints.navigator.WaypointLocatorMode;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.fabricmc.api.ClientModInitializer;
@@ -21,6 +22,9 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
       KeyMapping openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("advwp.key.open_menu", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), keyCategory));
       KeyMapping clearNavKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("advwp.key.clear_nav", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), keyCategory));
       ClientTickEvents.END_CLIENT_TICK.register((ClientTickEvents.EndTick)(client) -> {
+         // Tick the locator mode to keep the vanilla waypoint in sync
+         WaypointLocatorMode.getInstance().tick();
+
          while(openKey.consumeClick()) {
             client.execute(() -> client.gui.setScreen(new MainMenuScreen()));
          }
@@ -33,6 +37,7 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
       Commands.initialize();
       ClientPlayConnectionEvents.DISCONNECT.register((ClientPlayConnectionEvents.Disconnect)(handler, client) -> {
          WaypointStorage.setLastParent((Identifier)null);
+         WaypointLocatorMode.getInstance().removeWaypoint();
          clearNavigation();
       });
    }
