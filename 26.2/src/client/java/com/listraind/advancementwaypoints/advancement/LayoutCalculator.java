@@ -2,193 +2,184 @@ package com.listraind.advancementwaypoints.advancement;
 
 import com.google.gson.JsonObject;
 import com.listraind.advancementwaypoints.config.ConfigIO;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.advancements.AdvancementTree;
+import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.resources.Identifier;
 
-import java.util.*;
-
 public class LayoutCalculator {
+   private final Map<String, Point> positions = new LinkedHashMap();
+   private final Map<String, float[]> subtreeBounds = new HashMap();
 
-    private final Map<String, float[]> positions = new LinkedHashMap<>();
-    private final Map<String, float[]> vanillaShifts = new LinkedHashMap<>();
-    private final Map<String, float[]> subtreeBounds = new HashMap<>();
+   public void calculate(List<JsonObject> customEntries, AdvancementTree tree) {
+      this.positions.clear();
+      this.subtreeBounds.clear();
+      if (!customEntries.isEmpty()) {
+         Set<String> customIds = new HashSet();
 
-    public void calculate(List<JsonObject> customEntries, AdvancementTree tree) {
-        positions.clear();
-        vanillaShifts.clear();
-        subtreeBounds.clear();
-
-        if (customEntries.isEmpty()) return;
-
-        Set<String> customIds = new HashSet<>();
-        for (JsonObject o : customEntries) {
+         for(JsonObject o : customEntries) {
             customIds.add(ConfigIO.str(o, "id", ""));
-        }
+         }
 
-        Map<String, List<String>> childrenMap = new LinkedHashMap<>();
-        Map<String, String> parentMap = new HashMap<>();
-        List<String> roots = new ArrayList<>();
+         Map<String, List<String>> childrenMap = new LinkedHashMap();
+         Map<String, String> parentMap = new HashMap();
+         List<String> roots = new ArrayList();
 
-        for (JsonObject o : customEntries) {
+         for(JsonObject o : customEntries) {
             String id = ConfigIO.str(o, "id", "");
             String parent = ConfigIO.nullable(o, "parent");
-            childrenMap.putIfAbsent(id, new ArrayList<>());
-
-            if (parent == null || parent.isEmpty()) {
-                roots.add(id);
+            childrenMap.putIfAbsent(id, new ArrayList());
+            if (parent != null && !parent.isEmpty()) {
+               parentMap.put(id, parent);
+               if (customIds.contains(parent)) {
+                  ((List)childrenMap.computeIfAbsent(parent, (k) -> new ArrayList())).add(id);
+               } else {
+                  roots.add(id);
+               }
             } else {
-                parentMap.put(id, parent);
-                if (customIds.contains(parent)) {
-                    childrenMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(id);
-                } else {
-                    roots.add(id);
-                }
+               roots.add(id);
             }
-        }
+         }
 
-        float[] nextAvailableY = {0f};
+         float nextAvailableY = 0.0F;
 
-        for (String rootId : roots) {
-            String parentId = parentMap.get(rootId);
-            float parentX = 0f;
-
+         for(String rootId : roots) {
+            String parentId = (String)parentMap.get(rootId);
+            float parentX = 0.0F;
             if (parentId != null) {
-                AdvancementNode parentNode = tree.get(Identifier.parse(parentId));
-                if (parentNode != null && parentNode.holder().value().display().isPresent()) {
-                    var d = parentNode.holder().value().display().get();
-                    parentX = d.getX();
-                    nextAvailableY[0] = d.getY();
-                }
+               AdvancementNode parentNode = tree.get(Identifier.parse(parentId));
+               if (parentNode != null && parentNode.holder().value().display().isPresent()) {
+                  DisplayInfo d = (DisplayInfo)parentNode.holder().value().display().get();
+                  parentX = d.getX();
+                  nextAvailableY = d.getY();
+               }
             }
 
-            int treeSize = subtreeSize(rootId, childrenMap);
-            float startY = nextAvailableY[0];
-            float rootY = startY + (treeSize - 1) / 2.0f;
-
+            int treeSize = this.subtreeSize(rootId, childrenMap);
+            float rootY = nextAvailableY + (float)(treeSize - 1) / 2.0F;
             if (parentId != null) {
-                float vanillaMaxY = getVanillaSubtreeMaxY(parentId, tree, customIds);
-                if (vanillaMaxY > Float.NEGATIVE_INFINITY) {
-                    float requiredStart = vanillaMaxY + 1.0f;
-                    if (requiredStart > startY) {
-                        startY = requiredStart;
-                        rootY = startY + (treeSize - 1) / 2.0f;
-                    }
-                }
+               float vanillaMax = this.getVanillaSubtreeMaxY(parentId, tree, customIds);
+               if (vanillaMax > Float.NEGATIVE_INFINITY) {
+                  float requiredStart = vanillaMax + 1.0F;
+                  if (requiredStart > nextAvailableY) {
+                     rootY = requiredStart + (float)(treeSize - 1) / 2.0F;
+                  }
+               }
             }
 
-            positions.put(rootId, new float[]{parentX + 1.0f, rootY});
-            placeChildren(rootId, parentX + 1.0f, rootY, childrenMap, customIds, tree);
+            this.positions.put(rootId, new Point(parentX + 1.0F, rootY));
+            this.placeChildren(rootId, parentX + 1.0F, rootY, childrenMap, customIds, tree);
+            float[] bounds = this.computeSubtreeBounds(rootId, childrenMap);
+            this.subtreeBounds.put(rootId, bounds);
+            nextAvailableY = bounds[1] + 1.5F;
+         }
 
-            float[] bounds = computeSubtreeBounds(rootId, childrenMap);
-            subtreeBounds.put(rootId, bounds);
+      }
+   }
 
-            nextAvailableY[0] = bounds[1] + 1.5f;
-        }
-    }
+   private void placeChildren(String nodeId, float nodeX, float nodeY, Map<String, List<String>> childrenMap, Set<String> customIds, AdvancementTree tree) {
+      List<String> children = (List)childrenMap.getOrDefault(nodeId, Collections.emptyList());
+      if (!children.isEmpty()) {
+         float childX = nodeX + 1.0F;
+         int totalSize = 0;
 
-    private void placeChildren(String nodeId, float nodeX, float nodeY,
-                               Map<String, List<String>> childrenMap,
-                               Set<String> customIds,
-                               AdvancementTree tree) {
-        List<String> children = childrenMap.getOrDefault(nodeId, Collections.emptyList());
-        if (children.isEmpty()) return;
+         for(String child : children) {
+            totalSize += this.subtreeSize(child, childrenMap);
+         }
 
-        float childX = nodeX + 1.0f;
-
-        int totalSize = 0;
-        for (String child : children) {
-            totalSize += subtreeSize(child, childrenMap);
-        }
-
-        float vanillaMax = getVanillaSubtreeMaxY(nodeId, tree, customIds);
-        float vanillaMin = getVanillaSubtreeMinY(nodeId, tree, customIds);
-
-        float blockStart = nodeY - (totalSize - 1) / 2.0f;
-
-        if (vanillaMax > Float.NEGATIVE_INFINITY) {
-            float blockEnd = blockStart + totalSize - 1;
+         float vanillaMax = this.getVanillaSubtreeMaxY(nodeId, tree, customIds);
+         float blockStart = nodeY - (float)(totalSize - 1) / 2.0F;
+         if (vanillaMax > Float.NEGATIVE_INFINITY) {
+            float blockEnd = blockStart + (float)totalSize - 1.0F;
+            float vanillaMin = this.getVanillaSubtreeMinY(nodeId, tree, customIds);
             if (vanillaMin < blockEnd && vanillaMax > blockStart) {
-                blockStart = vanillaMax + 1.0f;
+               blockStart = vanillaMax + 1.0F;
             }
-        }
+         }
 
-        float cursor = blockStart;
-        for (String childId : children) {
-            int size = subtreeSize(childId, childrenMap);
-            float childY = cursor + (size - 1) / 2.0f;
-            positions.put(childId, new float[]{childX, childY});
-            placeChildren(childId, childX, childY, childrenMap, customIds, tree);
-            cursor += size;
-        }
-    }
+         float cursor = blockStart;
 
-    private int subtreeSize(String nodeId, Map<String, List<String>> childrenMap) {
-        List<String> children = childrenMap.getOrDefault(nodeId, Collections.emptyList());
-        if (children.isEmpty()) return 1;
-        int size = 0;
-        for (String child : children) {
-            size += subtreeSize(child, childrenMap);
-        }
-        return Math.max(size, 1);
-    }
+         for(String childId : children) {
+            int size = this.subtreeSize(childId, childrenMap);
+            float childY = cursor + (float)(size - 1) / 2.0F;
+            this.positions.put(childId, new Point(childX, childY));
+            this.placeChildren(childId, childX, childY, childrenMap, customIds, tree);
+            cursor += (float)size;
+         }
 
-    private float[] computeSubtreeBounds(String nodeId, Map<String, List<String>> childrenMap) {
-        float[] pos = positions.get(nodeId);
-        float min = pos != null ? pos[1] : 0f;
-        float max = pos != null ? pos[1] : 0f;
+      }
+   }
 
-        for (String child : childrenMap.getOrDefault(nodeId, Collections.emptyList())) {
-            float[] childBounds = computeSubtreeBounds(child, childrenMap);
-            min = Math.min(min, childBounds[0]);
-            max = Math.max(max, childBounds[1]);
-        }
-        return new float[]{min, max};
-    }
+   private int subtreeSize(String nodeId, Map<String, List<String>> childrenMap) {
+      List<String> children = (List)childrenMap.getOrDefault(nodeId, Collections.emptyList());
+      if (children.isEmpty()) {
+         return 1;
+      } else {
+         int size = 0;
 
-    private float getVanillaSubtreeMaxY(String parentId, AdvancementTree tree, Set<String> customIds) {
-        AdvancementNode node = tree.get(Identifier.parse(parentId));
-        if (node == null) return Float.NEGATIVE_INFINITY;
-        return vanillaDescendantMaxY(node, customIds);
-    }
+         for(String child : children) {
+            size += this.subtreeSize(child, childrenMap);
+         }
 
-    private float getVanillaSubtreeMinY(String parentId, AdvancementTree tree, Set<String> customIds) {
-        AdvancementNode node = tree.get(Identifier.parse(parentId));
-        if (node == null) return Float.POSITIVE_INFINITY;
-        return vanillaDescendantMinY(node, customIds);
-    }
+         return Math.max(size, 1);
+      }
+   }
 
-    private float vanillaDescendantMaxY(AdvancementNode node, Set<String> customIds) {
-        float max = Float.NEGATIVE_INFINITY;
-        for (AdvancementNode child : node.children()) {
-            String childId = child.holder().id().toString();
-            if (customIds.contains(childId)) continue;
+   private float[] computeSubtreeBounds(String nodeId, Map<String, List<String>> childrenMap) {
+      Point pos = (Point)this.positions.get(nodeId);
+      float min = pos != null ? pos.y() : 0.0F;
+      float max = pos != null ? pos.y() : 0.0F;
+
+      for(String child : childrenMap.getOrDefault(nodeId, Collections.emptyList())) {
+         float[] childBounds = this.computeSubtreeBounds(child, childrenMap);
+         min = Math.min(min, childBounds[0]);
+         max = Math.max(max, childBounds[1]);
+      }
+
+      return new float[]{min, max};
+   }
+
+   private float getVanillaSubtreeMaxY(String parentId, AdvancementTree tree, Set<String> customIds) {
+      AdvancementNode node = tree.get(Identifier.parse(parentId));
+      return node == null ? Float.NEGATIVE_INFINITY : this.findExtremeY(node, customIds, true);
+   }
+
+   private float getVanillaSubtreeMinY(String parentId, AdvancementTree tree, Set<String> customIds) {
+      AdvancementNode node = tree.get(Identifier.parse(parentId));
+      return node == null ? Float.POSITIVE_INFINITY : this.findExtremeY(node, customIds, false);
+   }
+
+   private float findExtremeY(AdvancementNode node, Set<String> customIds, boolean findMax) {
+      float extreme = findMax ? Float.NEGATIVE_INFINITY : Float.POSITIVE_INFINITY;
+
+      for(AdvancementNode child : node.children()) {
+         String childId = child.holder().id().toString();
+         if (!customIds.contains(childId)) {
             if (child.holder().value().display().isPresent()) {
-                max = Math.max(max, child.holder().value().display().get().getY());
+               float y = ((DisplayInfo)child.holder().value().display().get()).getY();
+               extreme = findMax ? Math.max(extreme, y) : Math.min(extreme, y);
             }
-            max = Math.max(max, vanillaDescendantMaxY(child, customIds));
-        }
-        return max;
-    }
 
-    private float vanillaDescendantMinY(AdvancementNode node, Set<String> customIds) {
-        float min = Float.POSITIVE_INFINITY;
-        for (AdvancementNode child : node.children()) {
-            String childId = child.holder().id().toString();
-            if (customIds.contains(childId)) continue;
-            if (child.holder().value().display().isPresent()) {
-                min = Math.min(min, child.holder().value().display().get().getY());
-            }
-            min = Math.min(min, vanillaDescendantMinY(child, customIds));
-        }
-        return min;
-    }
+            float childExtreme = this.findExtremeY(child, customIds, findMax);
+            extreme = findMax ? Math.max(extreme, childExtreme) : Math.min(extreme, childExtreme);
+         }
+      }
 
-    public Map<String, float[]> getPositions() {
-        return positions;
-    }
+      return extreme;
+   }
 
-    public Map<String, float[]> getVanillaShifts() {
-        return vanillaShifts;
-    }
+   public Map<String, Point> getPositions() {
+      return this.positions;
+   }
+
+   public static record Point(float x, float y) {
+   }
 }

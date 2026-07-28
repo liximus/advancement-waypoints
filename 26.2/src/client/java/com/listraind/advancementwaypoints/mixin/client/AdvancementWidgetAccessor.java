@@ -6,11 +6,11 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(AdvancementWidget.class)
+@Mixin({AdvancementWidget.class})
 public interface AdvancementWidgetAccessor {
-    @Accessor
-    AdvancementNode getAdvancementNode();
+   @Accessor
+   AdvancementNode getAdvancementNode();
 
-    @Invoker
-    boolean invokeIsMouseOver(int scrollX, int scrollY, int mouseX, int mouseY);
+   @Invoker
+   boolean invokeIsMouseOver(int var1, int var2, int var3, int var4);
 }

@@ -2,12 +2,14 @@
 	"required": false,
 	"package": "com.listraind.advancementwaypoints.mixin.compat",
 	"compatibilityLevel": "JAVA_25",
-	"plugin": "com.listraind.advancementwaypoints.mixin.compat.BetterAdvancementsMixinPlugin",
+	"refmap": "advancement-waypoints.compat.client.refmap.json",
+	"plugin": "com.listraind.advancementwaypoints.mixin.compat.AdvancementCompatMixinPlugin",
 	"client": [
 		"BetterAdvancementsScreenMixin",
 		"BetterAdvancementTabMixin",
 		"BetterAdvancementTabAccessor",
-		"BetterAdvancementWidgetMixin"
+		"BetterAdvancementWidgetMixin",
+		"PlaneAdvancementWidgetMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

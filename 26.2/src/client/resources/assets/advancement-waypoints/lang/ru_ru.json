@@ -4,10 +4,14 @@
   "advwp.menu.create_tab": "Создать вкладку",
   "advwp.menu.edit": "Редактировать",
 
+  "advwp.screen.create_waypoint": "§8Создание вейпоинта",
+  "advwp.screen.create_tab": "§8Создание вкладки",
+  "advwp.screen.edit_waypoint": "§8Редактирование вейпоинта",
   "advwp.create.title": "§8Создание вейпоинта",
   "advwp.create.tab.title": "§8Создание вкладки",
   "advwp.edit.title": "§8Редактирование вейпоинта",
 
+  "advwp.action.save": "§aСохранить",
   "advwp.button.create_save": "§aСоздать",
   "advwp.button.save": "§aСохранить",
   "advwp.button.delete": "§cУдалить",
@@ -44,5 +48,42 @@
 
   "advwp.key.category": "Advancement Waypoints",
   "advwp.key.open_menu": "Открыть меню",
-  "advwp.key.clear_nav": "Очистить навигатор"
+  "advwp.key.clear_nav": "Очистить навигатор",
+
+  "advwp.context.navigate": "§aНавигация",
+  "advwp.context.teleport": "§aТелепорт",
+  "advwp.context.nearest": "§eБлижайшая",
+  "advwp.context.sq_none": "§7—",
+  "advwp.context.sq_new": "§aНовый",
+  "advwp.context.sq_edit": "§eИзменить",
+  "advwp.context.sq_del": "§cУдалить",
+
+  "advwp.dialog.parent_change.title": "§8Изменение родителя",
+  "advwp.dialog.parent_change.message": "Родительский вейпоинт был изменён.",
+  "advwp.dialog.parent_change.submessage": "Переместить дочерние вейпоинты?",
+  "advwp.dialog.parent_change.only_current": "Только текущий",
+  "advwp.dialog.parent_change.with_children": "Все дочерние тоже",
+  "advwp.dialog.cancel": "Отмена",
+  "advwp.dialog.done": "Готово",
+
+  "advwp.dialog.delete.title": "§8Удаление вейпоинта",
+  "advwp.dialog.delete.message": "Вы уверены, что хотите удалить вейпоинт?",
+  "advwp.dialog.delete.confirm": "§cУдалить",
+
+  "advwp.context.create_tab": "Создать вкладку",
+  "advwp.screen.create_tab": "Создание вкладки",
+  "advwp.context.hide_branch": "§6Скрыть ветку",
+  "advwp.context.show_branch": "§aПоказать ветку",
+
+  "advwp.context.tab_visibility": "Видимость вкладок",
+  "advwp.screen.tab_visibility": "Видимость вкладок",
+  "advwp.visibility.shown": "§aПоказана",
+  "advwp.visibility.hidden": "§7Скрыта",
+
+  "advwp.config.title": "Настройки Advancement Waypoints",
+  "advwp.config.category.general": "Основные",
+  "advwp.config.chat_scanner": "Сканер координат в чате",
+  "advwp.config.chat_scanner.desc": "Автоматически распознает координаты в чате и делает их кликабельными для навигации.",
+  "advwp.config.open_manager": "Открыть менеджер вейпоинтов",
+  "advwp.config.open_manager.desc": "Открыть главное меню создания, редактирования и управления вейпоинтами и вкладками."
 }

@@ -8,11 +8,13 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(AdvancementTab.class)
+@Mixin({AdvancementTab.class})
 public class AdvancementTabMixin {
-
-    @Inject(method = "extractContents", at = @At("HEAD"))
-    private void onExtractContents(GuiGraphicsExtractor g, int x, int y, CallbackInfo ci) {
-        AdvancementTabCapture.set(x, y);
-    }
+   @Inject(
+      method = {"extractContents"},
+      at = {@At("HEAD")}
+   )
+   private void onExtractContents(GuiGraphicsExtractor g, int x, int y, CallbackInfo ci) {
+      AdvancementTabCapture.set(x, y);
+   }
 }

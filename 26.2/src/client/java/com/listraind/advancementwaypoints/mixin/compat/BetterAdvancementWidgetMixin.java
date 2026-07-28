@@ -2,9 +2,8 @@ package com.listraind.advancementwaypoints.mixin.compat;
 
 import betteradvancements.common.advancements.BetterDisplayInfo;
 import betteradvancements.common.gui.BetterAdvancementWidget;
-import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.compat.IBetterAdvancementWidget;
-import com.listraind.advancementwaypoints.navigator.Navigator;
+import com.listraind.advancementwaypoints.gui.base.WidgetFrameHelper;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.advancements.DisplayInfo;
@@ -13,80 +12,55 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(value = BetterAdvancementWidget.class, remap = false)
+@Mixin(
+   value = {BetterAdvancementWidget.class},
+   remap = false
+)
 public class BetterAdvancementWidgetMixin implements IBetterAdvancementWidget {
+   @Shadow(
+      remap = false
+   )
+   private AdvancementNode advancementNode;
+   @Shadow(
+      remap = false
+   )
+   private DisplayInfo displayInfo;
+   @Shadow
+   public int x;
+   @Shadow
+   public int y;
+   @Shadow
+   private BetterDisplayInfo betterDisplayInfo;
 
-    @Shadow(remap = false)
-    private AdvancementNode advancementNode;
+   @Redirect(
+      method = {"draw"},
+      at = @At(
+   value = "INVOKE",
+   target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIIII)V"
+),
+      remap = true
+   )
+   private void redirectBlitSprite(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline, Identifier sprite, int x, int y, int width, int height, int color) {
+      guiGraphics.blitSprite(pipeline, WidgetFrameHelper.resolveSprite(sprite, this.advancementNode, this.displayInfo), x, y, width, height, color);
+   }
 
-    @Shadow(remap = false)
-    private DisplayInfo displayInfo;
+   @Redirect(
+      method = {"drawHover"},
+      at = @At(
+   value = "INVOKE",
+   target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIIII)V"
+),
+      remap = true
+   )
+   private void redirectBlitSpriteHover(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline, Identifier sprite, int x, int y, int width, int height, int color) {
+      guiGraphics.blitSprite(pipeline, WidgetFrameHelper.resolveSprite(sprite, this.advancementNode, this.displayInfo), x, y, width, height, color);
+   }
 
-    @Unique
-    private static final Identifier TASK_SELECTED = Identifier.fromNamespaceAndPath(
-            AdvancementWaypoints.MOD_ID, "advancements/task_frame_selected");
-    @Unique
-    private static final Identifier GOAL_SELECTED = Identifier.fromNamespaceAndPath(
-            AdvancementWaypoints.MOD_ID, "advancements/goal_frame_selected");
-    @Unique
-    private static final Identifier CHALLENGE_SELECTED = Identifier.fromNamespaceAndPath(
-            AdvancementWaypoints.MOD_ID, "advancements/challenge_frame_selected");
-
-    @Redirect(
-            method = "draw",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIIII)V"
-            ),
-            remap = true
-    )
-    private void redirectBlitSprite(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
-                                    Identifier sprite, int x, int y, int width, int height, int color) {
-        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height, color);
-    }
-
-    @Redirect(
-            method = "drawHover",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIIII)V"
-            ),
-            remap = true
-    )
-    private void redirectBlitSpriteHover(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
-                                         Identifier sprite, int x, int y, int width, int height, int color) {
-        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height, color);
-    }
-
-    @Unique
-    private Identifier resolveSprite(Identifier original) {
-        Identifier currentId = Navigator.getInstance().getCurrentId();
-        if (currentId == null || !currentId.equals(advancementNode.holder().id())) return original;
-        return switch (displayInfo.getType()) {
-            case TASK -> TASK_SELECTED;
-            case GOAL -> GOAL_SELECTED;
-            case CHALLENGE -> CHALLENGE_SELECTED;
-        };
-    }
-
-    @Shadow
-    public int x;
-    @Shadow
-    public int y;
-    @Shadow
-    private BetterDisplayInfo betterDisplayInfo;
-
-    @Override
-    public void advWp_updatePosition() {
-        this.x = this.betterDisplayInfo.getPosX() != null
-                ? this.betterDisplayInfo.getPosX()
-                : Mth.floor(this.displayInfo.getX() * 32.0F);
-        this.y = this.betterDisplayInfo.getPosY() != null
-                ? this.betterDisplayInfo.getPosY()
-                : Mth.floor(this.displayInfo.getY() * 27.0F);
-    }
+   public void advWp_updatePosition() {
+      this.x = this.betterDisplayInfo.getPosX() != null ? this.betterDisplayInfo.getPosX() : Mth.floor(this.displayInfo.getX() * 32.0F);
+      this.y = this.betterDisplayInfo.getPosY() != null ? this.betterDisplayInfo.getPosY() : Mth.floor(this.displayInfo.getY() * 27.0F);
+   }
 }

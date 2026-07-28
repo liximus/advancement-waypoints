@@ -1,71 +1,100 @@
 package com.listraind.advancementwaypoints.mixin.client;
 
-import com.listraind.advancementwaypoints.AdvancementWaypoints;
-import com.listraind.advancementwaypoints.navigator.Navigator;
+import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
+import com.listraind.advancementwaypoints.config.WaypointStorage;
+import com.listraind.advancementwaypoints.gui.base.WidgetFrameHelper;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.advancements.DisplayInfo;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.advancements.AdvancementWidget;
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(AdvancementWidget.class)
+@Mixin(
+   value = {AdvancementWidget.class},
+   priority = 500
+)
 public class AdvancementWidgetMixin {
+   @Shadow
+   private AdvancementNode advancementNode;
+   @Shadow
+   private DisplayInfo display;
 
-    @Shadow
-    private AdvancementNode advancementNode;
+   @Inject(
+      method = {"extractRenderState"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void suppressRenderIfHidden(GuiGraphicsExtractor g, int x, int y, CallbackInfo ci) {
+      if (WaypointStorage.isNodeHidden(this.advancementNode)) {
+         ci.cancel();
+      }
 
-    @Shadow
-    private DisplayInfo display;
+   }
 
-    @Unique
-    private static final Identifier TASK_SELECTED = Identifier.fromNamespaceAndPath(
-            AdvancementWaypoints.MOD_ID, "advancements/task_frame_selected");
-    @Unique
-    private static final Identifier GOAL_SELECTED = Identifier.fromNamespaceAndPath(
-            AdvancementWaypoints.MOD_ID, "advancements/goal_frame_selected");
-    @Unique
-    private static final Identifier CHALLENGE_SELECTED = Identifier.fromNamespaceAndPath(
-            AdvancementWaypoints.MOD_ID, "advancements/challenge_frame_selected");
+   @Inject(
+      method = {"extractConnectivity"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void suppressConnectivityIfHidden(GuiGraphicsExtractor g, int x, int y, boolean drawLines, CallbackInfo ci) {
+      if (WaypointStorage.isNodeHidden(this.advancementNode)) {
+         ci.cancel();
+      }
 
-    @Redirect(
-            method = "extractRenderState",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"
-            )
-    )
-    private void redirectBlitSpriteDraw(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
-                                        Identifier sprite, int x, int y, int width, int height) {
-        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height);
-    }
+   }
 
-    @Redirect(
-            method = "extractHover",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V",
-                    ordinal = 3
-            )
-    )
-    private void redirectBlitSpriteHover(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline,
-                                         Identifier sprite, int x, int y, int width, int height) {
-        guiGraphics.blitSprite(pipeline, resolveSprite(sprite), x, y, width, height);
-    }
+   @Inject(
+      method = {"extractHover"},
+      at = {@At("HEAD")},
+      cancellable = true
+   )
+   private void suppressHoverWhenOverContextMenu(GuiGraphicsExtractor g, int originX, int originY, float partialTick, int mouseX, int mouseY, CallbackInfo ci) {
+      if (WaypointStorage.isNodeHidden(this.advancementNode)) {
+         ci.cancel();
+      } else {
+         Minecraft mc = Minecraft.getInstance();
+         Screen var10 = mc.gui.screen();
+         if (var10 instanceof IAdvancementScreenCustom) {
+            IAdvancementScreenCustom custom = (IAdvancementScreenCustom)var10;
+            double realMx = mc.mouseHandler.xpos() * (double)mc.getWindow().getGuiScaledWidth() / (double)mc.getWindow().getWidth();
+            double realMy = mc.mouseHandler.ypos() * (double)mc.getWindow().getGuiScaledHeight() / (double)mc.getWindow().getHeight();
+            if (custom.advWaypoint_isMouseOverContextMenu(realMx, realMy)) {
+               ci.cancel();
+            }
+         }
 
-    @Unique
-    private Identifier resolveSprite(Identifier original) {
-        Identifier currentId = Navigator.getInstance().getCurrentId();
-        if (currentId == null || !currentId.equals(advancementNode.holder().id())) return original;
-        return switch (display.getType()) {
-            case TASK -> TASK_SELECTED;
-            case GOAL -> GOAL_SELECTED;
-            case CHALLENGE -> CHALLENGE_SELECTED;
-        };
-    }
+      }
+   }
+
+   @Redirect(
+      method = {"extractRenderState"},
+      at = @At(
+   value = "INVOKE",
+   target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V"
+)
+   )
+   private void redirectBlitSpriteDraw(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline, Identifier sprite, int x, int y, int width, int height) {
+      guiGraphics.blitSprite(pipeline, WidgetFrameHelper.resolveSprite(sprite, this.advancementNode, this.display), x, y, width, height);
+   }
+
+   @Redirect(
+      method = {"extractHover"},
+      at = @At(
+   value = "INVOKE",
+   target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V",
+   ordinal = 3
+)
+   )
+   private void redirectBlitSpriteHover(GuiGraphicsExtractor guiGraphics, RenderPipeline pipeline, Identifier sprite, int x, int y, int width, int height) {
+      guiGraphics.blitSprite(pipeline, WidgetFrameHelper.resolveSprite(sprite, this.advancementNode, this.display), x, y, width, height);
+   }
 }

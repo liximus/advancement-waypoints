@@ -11,8 +11,10 @@ base {
 }
 
 repositories {
-	// Репозитории для внешних зависимостей (если понадобятся)
 	mavenCentral()
+	maven { url "https://maven.terraformersmc.com/" }
+	maven { url "https://maven.isxander.dev/releases" }
+	maven { url "https://maven.isxander.dev/snapshots" }
 }
 
 def localProps = new Properties()
@@ -32,6 +34,9 @@ loom {
 	}
 }
 
+def modmenuStubDir = layout.buildDirectory.dir("generated/sources/modmenuStubs/java").get().asFile
+def modmenuStubClassesDir = layout.buildDirectory.dir("generated/sources/modmenuStubs/classes").get().asFile
+
 dependencies {
 	// Скачивание клиента/сервера Minecraft
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -43,8 +48,47 @@ dependencies {
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// Локальная зависимость (если используете файл из папки libs)
-	compileOnly files("libs/BetterAdvancements-Fabric-xxx.jar")
+	implementation "dev.isxander:yet-another-config-lib:3.9.6+26.2-fabric"
+
+	// Локальные зависимости из папки libs
+	compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+	clientCompileOnly files(modmenuStubClassesDir)
+}
+
+def generateModMenuStubs = tasks.register('generateModMenuStubs') {
+	outputs.dir(modmenuStubDir)
+	doLast {
+		def apiDir = new File(modmenuStubDir, "com/terraformersmc/modmenu/api")
+		apiDir.mkdirs()
+		new File(apiDir, "ConfigScreenFactory.java").text = '''package com.terraformersmc.modmenu.api;
+import net.minecraft.client.gui.screens.Screen;
+
+@FunctionalInterface
+public interface ConfigScreenFactory<S extends Screen> {
+    S create(Screen parent);
+}
+'''
+		new File(apiDir, "ModMenuApi.java").text = '''package com.terraformersmc.modmenu.api;
+
+public interface ModMenuApi {
+    default ConfigScreenFactory<?> getModConfigScreenFactory() {
+        return parent -> null;
+    }
+}
+'''
+	}
+}
+
+def compileModMenuStubs = tasks.register('compileModMenuStubs', JavaCompile) {
+	dependsOn generateModMenuStubs
+	source = fileTree(modmenuStubDir)
+	destinationDirectory = modmenuStubClassesDir
+	classpath = sourceSets.client.compileClasspath - files(modmenuStubClassesDir)
+	options.release = 25
+}
+
+tasks.named('compileClientJava') {
+	dependsOn compileModMenuStubs
 }
 
 processResources {

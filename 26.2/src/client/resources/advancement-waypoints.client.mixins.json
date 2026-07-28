@@ -2,6 +2,7 @@
 	"required": true,
 	"package": "com.listraind.advancementwaypoints.mixin.client",
 	"compatibilityLevel": "JAVA_25",
+	"refmap": "advancement-waypoints.client.refmap.json",
 	"client": [
 		"ClientAdvancementsMixin",
 		"AdvancementTabAccessor",
@@ -10,7 +11,8 @@
 		"AdvancementsScreenMixin",
 		"DisplayInfoAccessor",
 		"MinecraftMixin",
-		"AdvancementWidgetMixin"
+		"AdvancementWidgetMixin",
+		"ChatComponentMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

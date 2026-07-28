@@ -2,6 +2,7 @@
 	"required": true,
 	"package": "com.listraind.advancementwaypoints.mixin",
 	"compatibilityLevel": "JAVA_25",
+	"refmap": "advancement-waypoints.refmap.json",
 	"mixins": [
 	],
 	"injectors": {

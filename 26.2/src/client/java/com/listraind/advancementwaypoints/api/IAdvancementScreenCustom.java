@@ -1,15 +1,17 @@
 package com.listraind.advancementwaypoints.api;
 
+import java.util.function.Consumer;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.Identifier;
 
-import java.util.function.Consumer;
-
-
 public interface IAdvancementScreenCustom {
-    void advWaypoint_setSelectMode(Consumer<Identifier> cb);
+   void advWaypoint_setSelectMode(Consumer<Identifier> var1);
 
-    void advWaypoint_setScreenToOpen(Screen s);
+   void advWaypoint_setScreenToOpen(Screen var1);
 
-    void advWaypoint_setParentScreen(Screen s);
+   void advWaypoint_setParentScreen(Screen var1);
+
+   default boolean advWaypoint_isMouseOverContextMenu(double mx, double my) {
+      return false;
+   }
 }
