@@ -355,7 +355,7 @@ public class WaypointStorage {
       return "advwaypoints:" + ns + "_" + System.currentTimeMillis();
    }
 
-   public static JsonObject buildWaypointJson(String id, String title, String icon, String desc, String parent, String bg) {
+   public static JsonObject buildWaypointJson(String id, String title, String icon, String desc, String frame, String parent, String bg) {
       JsonObject json = new JsonObject();
       json.addProperty("id", id);
       if (parent != null && !parent.isEmpty()) {
@@ -366,12 +366,19 @@ public class WaypointStorage {
       display.addProperty("title", title);
       display.addProperty("icon", icon);
       display.addProperty("description", desc);
+      if (frame != null && !frame.isEmpty()) {
+         display.addProperty("frame", frame);
+      }
       if (bg != null && !bg.isEmpty()) {
          display.addProperty("background", bg);
       }
 
       json.add("display", display);
       return json;
+   }
+
+   public static JsonObject buildWaypointJson(String id, String title, String icon, String desc, String parent, String bg) {
+      return buildWaypointJson(id, title, icon, desc, "task", parent, bg);
    }
 
    public static void saveWaypoint(String id, JsonObject data) {

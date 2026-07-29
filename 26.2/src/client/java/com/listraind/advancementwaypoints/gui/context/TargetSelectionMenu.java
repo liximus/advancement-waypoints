@@ -83,8 +83,8 @@ public class TargetSelectionMenu {
          }
       } else if (this.action == TargetSelectionMenu.Action.NAVIGATE) {
          Navigator nav = Navigator.getInstance();
-         nav.setCurrentId(this.advancementId);
          nav.clearAll();
+         nav.setCurrentId(this.advancementId);
          nav.setTargets(dimension, List.of(pos));
       } else if (this.action == TargetSelectionMenu.Action.TELEPORT) {
          Minecraft minecraft = Minecraft.getInstance();
@@ -95,8 +95,8 @@ public class TargetSelectionMenu {
 
    private void executeNavigateAll() {
       Navigator nav = Navigator.getInstance();
-      nav.setCurrentId(this.advancementId);
       nav.clearAll();
+      nav.setCurrentId(this.advancementId);
       if (this.targets != null) {
          this.targets.forEach((dim, posList) -> {
             if (posList != null) {
@@ -170,7 +170,6 @@ public class TargetSelectionMenu {
       NAVIGATE,
       TELEPORT;
 
-      // $FF: synthetic method
       private static Action[] $values() {
          return new Action[]{NAVIGATE, TELEPORT};
       }

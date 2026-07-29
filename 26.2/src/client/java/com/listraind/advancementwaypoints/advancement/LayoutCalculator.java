@@ -19,6 +19,35 @@ public class LayoutCalculator {
    private final Map<String, Point> positions = new LinkedHashMap();
    private final Map<String, float[]> subtreeBounds = new HashMap();
 
+   public static String resolveEffectiveParentId(String parentId, AdvancementTree tree) {
+      if (parentId == null || parentId.isEmpty()) return parentId;
+      if (com.listraind.advancementwaypoints.config.ModConfig.getInstance().isAllowAttachToAnyNode()) return parentId;
+      if (parentId.startsWith("advwaypoints:")) return parentId;
+      if (tree == null) return parentId;
+
+      try {
+         Identifier id = Identifier.parse(parentId);
+         AdvancementNode node = tree.get(id);
+         if (node == null) return parentId;
+
+         AdvancementNode current = node;
+         while (current.children() != null && current.children().iterator().hasNext()) {
+            AdvancementNode vanillaChild = null;
+            for (AdvancementNode child : current.children()) {
+               if (!child.holder().id().getNamespace().equals("advwaypoints")) {
+                  vanillaChild = child;
+                  break;
+               }
+            }
+            if (vanillaChild == null) break;
+            current = vanillaChild;
+         }
+         return current.holder().id().toString();
+      } catch (Exception e) {
+         return parentId;
+      }
+   }
+
    public void calculate(List<JsonObject> customEntries, AdvancementTree tree) {
       this.positions.clear();
       this.subtreeBounds.clear();
@@ -35,7 +64,8 @@ public class LayoutCalculator {
 
          for(JsonObject o : customEntries) {
             String id = ConfigIO.str(o, "id", "");
-            String parent = ConfigIO.nullable(o, "parent");
+            String rawParent = ConfigIO.nullable(o, "parent");
+            String parent = resolveEffectiveParentId(rawParent, tree);
             childrenMap.putIfAbsent(id, new ArrayList());
             if (parent != null && !parent.isEmpty()) {
                parentMap.put(id, parent);

@@ -26,6 +26,10 @@
   "advwp.field.background": "Background: %s",
   "advwp.field.background.default": "stone (default, not set)",
 
+  "advwp.frame.task": "Task",
+  "advwp.frame.goal": "Goal",
+  "advwp.frame.challenge": "Challenge",
+
   "advwp.coord.row.delete": "Remove",
   "advwp.coord.row.fill": "Current",
   "advwp.coord.row.add": "Add coordinates",
@@ -83,6 +87,7 @@
   "advwp.config.title": "Advancement Waypoints Settings",
   "advwp.config.category.general": "General",
   "advwp.config.category.navigation": "Navigation",
+  "advwp.config.category.waypoint_management": "Waypoint Management",
   "advwp.config.chat_scanner": "Chat Coordinate Scanner",
   "advwp.config.chat_scanner.desc": "Automatically detects coordinates in chat messages and makes them clickable for navigation.",
   "advwp.config.enable_navigation": "Enable Navigation",
@@ -103,5 +108,18 @@
   "advwp.config.show_distance_on_locator": "Show Distance Instead of XP",
   "advwp.config.show_distance_on_locator.desc": "Displays the distance to your target in meters above the hotbar instead of your experience level.",
   "advwp.config.show_item_on_locator": "Waypoint Item Icon on Locator",
-  "advwp.config.show_item_on_locator.desc": "Replaces the default dot on the locator with the item of your selected waypoint."
+  "advwp.config.show_item_on_locator.desc": "Replaces the default dot on the locator with the item of your selected waypoint.",
+  "advwp.config.allow_attach_to_any_node": "Attach to Any Node (Beta)",
+  "advwp.config.allow_attach_to_any_node.desc": "Allows attaching custom waypoints to any intermediate achievement in vanilla tabs. By default, waypoints automatically shift to the end of the branch to prevent visual tree glitches.",
+  "advwp.config.auto_disable_radius": "Auto-Disable Radius",
+  "advwp.config.auto_disable_radius.desc": "Radius in blocks from destination where navigation auto-disables after the set time (0 = disabled).",
+  "advwp.config.auto_disable_time": "Auto-Disable Delay",
+  "advwp.config.auto_disable_time.desc": "Time in seconds required inside the radius before navigation auto-disables.",
+  "advwp.config.proximity_pulse": "Proximity Pulse",
+  "advwp.config.proximity_pulse.desc": "Smooth opacity pulsing (50%-100%) when inside the destination radius.",
+  "advwp.config.pulse_speed": "Pulse Speed",
+  "advwp.config.pulse_speed.desc": "Speed of the indicator pulse when inside the destination radius.",
+  "advwp.config.pulse_speed.slow": "Slow",
+  "advwp.config.pulse_speed.medium": "Medium",
+  "advwp.config.pulse_speed.fast": "Fast"
 }

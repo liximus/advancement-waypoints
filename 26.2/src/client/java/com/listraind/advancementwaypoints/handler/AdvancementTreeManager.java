@@ -108,8 +108,9 @@ public class AdvancementTreeManager {
             Map<String, Criterion<?>> criteria = Map.of(
                     "auto", new Criterion<>(new ImpossibleTrigger(), new ImpossibleTrigger.TriggerInstance())
             );
-            Optional<Identifier> parent = w.parent() != null && !w.parent().isEmpty()
-                    ? Optional.of(Identifier.parse(w.parent())) : Optional.empty();
+            String effectiveParentId = com.listraind.advancementwaypoints.advancement.LayoutCalculator.resolveEffectiveParentId(w.parent(), tree);
+            Optional<Identifier> parent = effectiveParentId != null && !effectiveParentId.isEmpty()
+                    ? Optional.of(Identifier.parse(effectiveParentId)) : Optional.empty();
 
             holders.add(new AdvancementHolder(id, new Advancement(
                     parent, Optional.of(display), AdvancementRewards.EMPTY,

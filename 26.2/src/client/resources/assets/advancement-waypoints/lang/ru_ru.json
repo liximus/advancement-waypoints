@@ -26,6 +26,10 @@
   "advwp.field.background": "Фон: %s",
   "advwp.field.background.default": "stone (по умолч., не выбран)",
 
+  "advwp.frame.task": "Обычное",
+  "advwp.frame.goal": "Цель",
+  "advwp.frame.challenge": "Испытание",
+
   "advwp.coord.row.delete": "Удалить",
   "advwp.coord.row.fill": "Текущие",
   "advwp.coord.row.add": "Добавить координаты",
@@ -83,6 +87,7 @@
   "advwp.config.title": "Настройки Advancement Waypoints",
   "advwp.config.category.general": "Основное",
   "advwp.config.category.navigation": "Навигация",
+  "advwp.config.category.waypoint_management": "Управление вейпоинтами",
   "advwp.config.chat_scanner": "Сканер координат в чате",
   "advwp.config.chat_scanner.desc": "Автоматически находит координаты в сообщениях чата и делает их кликабельными для навигации.",
   "advwp.config.enable_navigation": "Включить навигацию",
@@ -103,5 +108,18 @@
   "advwp.config.show_distance_on_locator": "Отображать расстояние вместо опыта",
   "advwp.config.show_distance_on_locator.desc": "Выводит дистанцию до вейпоинта в метрах над хотбаром вместо уровня опыта.",
   "advwp.config.show_item_on_locator": "Иконка вейпоинта вместо точки",
-  "advwp.config.show_item_on_locator.desc": "Заменяет стандартную точку на локаторе на предмет выбранного вейпоинта."
+  "advwp.config.show_item_on_locator.desc": "Заменяет стандартную точку на локаторе на предмет выбранного вейпоинта.",
+  "advwp.config.allow_attach_to_any_node": "Привязка к любому звену (Бета)",
+  "advwp.config.allow_attach_to_any_node.desc": "Разрешает привязывать кастомные вейпоинты к промежуточным достижениям в ванильных вкладках. По умолчанию вейпоинты автоматически смещаются к концу ветки во избежание графических багов.",
+  "advwp.config.auto_disable_radius": "Радиус автоотключения",
+  "advwp.config.auto_disable_radius.desc": "Радиус в блоках от места назначения, при нахождении в котором навигация автоматически отключается (0 = отключено).",
+  "advwp.config.auto_disable_time": "Время автоотключения",
+  "advwp.config.auto_disable_time.desc": "Время в секундах, которое необходимо находиться в радиусе назначения для автоотключения навигации.",
+  "advwp.config.proximity_pulse": "Пульсация при приближении",
+  "advwp.config.proximity_pulse.desc": "Плавная пульсация прозрачности индикатора (50%-100%), когда вы находитесь в радиусе назначения.",
+  "advwp.config.pulse_speed": "Скорость мерцания",
+  "advwp.config.pulse_speed.desc": "Скорость пульсации навигационного индикатора при приближении.",
+  "advwp.config.pulse_speed.slow": "Медленная",
+  "advwp.config.pulse_speed.medium": "Обычная",
+  "advwp.config.pulse_speed.fast": "Быстрая"
 }

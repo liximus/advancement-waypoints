@@ -10,9 +10,7 @@ import net.minecraft.client.gui.screens.advancements.AdvancementTab;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
 import net.minecraft.util.Mth;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 public class AdvancementHoverHelper {
@@ -26,7 +24,7 @@ public class AdvancementHoverHelper {
             AdvancementTab selectedTab,
             double mx, double my
     ) {
-        if (tabs == null || tabs.isEmpty()) return null;
+        if (selectedTab == null) return null;
 
         int defLeft = (screenWidth - AdvancementsScreen.WINDOW_WIDTH) / 2 + 9;
         int defTop = (screenHeight - AdvancementsScreen.WINDOW_HEIGHT) / 2 + 18;
@@ -46,17 +44,20 @@ public class AdvancementHoverHelper {
             contentTop = com.listraind.advancementwaypoints.compat.PlaneAdvancementsHelper.getContentTop(screen, defTop);
         }
 
-        List<AdvancementTab> tabList = new ArrayList<>();
-        if (selectedTab != null) tabList.add(selectedTab);
-        for (AdvancementTab t : tabs.values()) {
-            if (t != null && !tabList.contains(t)) tabList.add(t);
+        int relX = (int) mx - contentLeft;
+        int relY = (int) my - contentTop;
+
+        if (!IS_PLANE_MOD) {
+            if (relX < 0 || relX >= 234 || relY < 0 || relY >= 113) {
+                return null;
+            }
+        } else {
+            if (relY < 0) {
+                return null;
+            }
         }
 
-        for (AdvancementTab currentTab : tabList) {
-            AdvancementNode node = findInTab(currentTab, contentLeft, contentTop, mx, my);
-            if (node != null) return node;
-        }
-        return null;
+        return findInTab(selectedTab, contentLeft, contentTop, mx, my);
     }
 
     private static AdvancementNode findInTab(AdvancementTab currentTab, int contentLeft, int contentTop, double mx, double my) {

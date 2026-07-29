@@ -22,7 +22,6 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
       KeyMapping openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("advwp.key.open_menu", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), keyCategory));
       KeyMapping clearNavKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("advwp.key.clear_nav", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), keyCategory));
       ClientTickEvents.END_CLIENT_TICK.register((ClientTickEvents.EndTick)(client) -> {
-         // Tick the locator mode to keep the vanilla waypoint in sync
          WaypointLocatorMode.getInstance().tick();
 
          while(openKey.consumeClick()) {

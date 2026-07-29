@@ -87,8 +87,10 @@ public class AdvancementContextMenu {
             });
         }
 
+        boolean canCreate = isCustom || !hasChildren || com.listraind.advancementwaypoints.config.ModConfig.getInstance().isAllowAttachToAnyNode();
+
         menu.addSquareButton(null, Component.translatable("advwp.context.sq_none"), null, false);
-        menu.addSquareButton(CREATE_ICON, Component.translatable("advwp.context.sq_new"), () -> onSquareAction(1), true);
+        menu.addSquareButton(CREATE_ICON, Component.translatable("advwp.context.sq_new"), () -> onSquareAction(1), canCreate);
         menu.addSquareButton(EDIT_ICON, Component.translatable("advwp.context.sq_edit"), () -> onSquareAction(2), isCustom);
         menu.addSquareButton(DELETE_ICON, Component.translatable("advwp.context.sq_del"), () -> onSquareAction(3), isCustom);
 
@@ -171,8 +173,8 @@ public class AdvancementContextMenu {
 
     private void onNavigate() {
         Navigator nav = Navigator.getInstance();
-        nav.setCurrentId(advancementId);
         nav.clearAll();
+        nav.setCurrentId(advancementId);
         if (targets != null) {
             targets.forEach((dim, posList) -> {
                 if (posList != null) nav.setTargets(dim, posList);
@@ -199,6 +201,7 @@ public class AdvancementContextMenu {
             case 1 -> {
                 WaypointStorage.setLastParent(advancementId);
                 CreateWaypointScreen screen = new CreateWaypointScreen();
+                screen.setLockParent(true);
                 screen.onCloseAction = () -> reopenAdvancementsScreen(minecraft);
                 minecraft.gui.setScreen(screen);
             }

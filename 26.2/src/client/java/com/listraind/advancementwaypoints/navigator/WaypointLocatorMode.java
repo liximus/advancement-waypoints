@@ -1,17 +1,24 @@
 package com.listraind.advancementwaypoints.navigator;
 
+import com.google.gson.JsonObject;
+import com.listraind.advancementwaypoints.config.ConfigIO;
 import com.listraind.advancementwaypoints.config.ModConfig;
+import com.listraind.advancementwaypoints.config.WaypointStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.waypoints.ClientWaypointManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.waypoints.TrackedWaypoint;
 import net.minecraft.world.waypoints.Waypoint;
 import net.minecraft.world.waypoints.WaypointStyleAssets;
@@ -150,13 +157,30 @@ public class WaypointLocatorMode {
     public static @Nullable ItemStack getCurrentTargetIcon() {
         Navigator nav = Navigator.getInstance();
         Identifier id = nav.getCurrentId();
-        if (id == null) return null;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.player.connection == null) return null;
-        AdvancementHolder holder = mc.player.connection.getAdvancements().get(id);
-        if (holder != null && holder.value().display().isPresent()) {
-            return holder.value().display().get().getIcon().create();
+        if (id != null) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && mc.player.connection != null) {
+                AdvancementNode node = mc.player.connection.getAdvancements().getTree().get(id);
+                if (node != null && node.holder().value().display().isPresent()) {
+                    return node.holder().value().display().get().getIcon().create();
+                }
+            }
+            for (JsonObject o : WaypointStorage.loadWaypoints()) {
+                String sid = ConfigIO.str(o, "id", "");
+                if (id.toString().equals(sid)) {
+                    JsonObject display = o.has("display") && o.get("display").isJsonObject() ? o.getAsJsonObject("display") : o;
+                    String iconStr = ConfigIO.str(display, "icon", ConfigIO.str(o, "icon", "minecraft:paper"));
+                    try {
+                        Identifier iconId = Identifier.parse(iconStr);
+                        Item item = BuiltInRegistries.ITEM.getValue(iconId);
+                        if (item != null && item != Items.AIR) {
+                            return new ItemStack(item);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
         }
-        return null;
+        return new ItemStack(Items.PAPER);
     }
 }

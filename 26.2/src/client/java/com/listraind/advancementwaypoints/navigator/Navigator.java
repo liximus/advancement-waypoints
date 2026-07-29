@@ -1,5 +1,6 @@
 package com.listraind.advancementwaypoints.navigator;
 
+import com.listraind.advancementwaypoints.config.ModConfig;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -10,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,12 +75,70 @@ public class Navigator {
       return dx * dx + dz * dz;
    }
 
+   private BlockPos lastTargetPos = null;
+   private long proximityStartTime = 0L;
+
    public boolean hasAnyTarget() {
       return !this.targets.isEmpty();
    }
 
    public void clearAll() {
       this.targets.clear();
+      this.currentId = null;
+      this.proximityStartTime = 0L;
+      this.lastTargetPos = null;
+   }
+
+   private Dimension lastPlayerDimension = null;
+
+   public float updateProximityAndGetAlpha(Player player, BlockPos currentTarget) {
+      ModConfig config = ModConfig.getInstance();
+      int radius = config.getAutoDisableRadius();
+      if (radius <= 0 || player == null || currentTarget == null) {
+         this.proximityStartTime = 0L;
+         this.lastTargetPos = null;
+         return 1.0f;
+      }
+
+      Dimension currentDim = Dimension.from(player.level().dimension());
+      if (this.lastPlayerDimension != null && currentDim != null && this.lastPlayerDimension != currentDim) {
+         if (this.proximityStartTime > 0L) {
+            this.clearAll();
+            this.lastPlayerDimension = currentDim;
+            return 1.0f;
+         }
+      }
+      this.lastPlayerDimension = currentDim;
+
+      double dx = (double)currentTarget.getX() + 0.5D - player.getX();
+      double dz = (double)currentTarget.getZ() + 0.5D - player.getZ();
+      double dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist <= radius) {
+         long now = System.currentTimeMillis();
+         if (this.proximityStartTime == 0L || !Objects.equals(this.lastTargetPos, currentTarget)) {
+            this.proximityStartTime = now;
+            this.lastTargetPos = currentTarget;
+         }
+
+         long elapsedMs = now - this.proximityStartTime;
+         int maxSeconds = config.getAutoDisableTime();
+         if (maxSeconds > 0 && elapsedMs >= maxSeconds * 1000L) {
+            this.clearAll();
+            return 1.0f;
+         }
+
+         if (config.isEnableProximityPulse()) {
+            double mult = config.getPulseSpeed().getMultiplier();
+            double sine = Math.sin((now % 6283L) * mult);
+            return 0.75f + 0.25f * (float)sine;
+         }
+      } else {
+         this.proximityStartTime = 0L;
+         this.lastTargetPos = null;
+      }
+
+      return 1.0f;
    }
 
    public void setCurrentId(Identifier id) {
@@ -104,7 +164,6 @@ public class Navigator {
          }
       }
 
-      // $FF: synthetic method
       private static Dimension[] $values() {
          return new Dimension[]{OVERWORLD, NETHER, END};
       }

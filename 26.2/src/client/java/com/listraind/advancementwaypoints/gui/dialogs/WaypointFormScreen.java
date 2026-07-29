@@ -4,6 +4,7 @@ import com.listraind.advancementwaypoints.advancement.CoordParser;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
 import com.listraind.advancementwaypoints.gui.base.BaseModScreen;
 import com.listraind.advancementwaypoints.gui.base.ModBackground;
+import com.listraind.advancementwaypoints.gui.base.PopupMenu;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.advancements.AdvancementNode;
@@ -25,6 +26,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public abstract class WaypointFormScreen extends BaseModScreen {
+   private static final Identifier TASK_ICON = Identifier.fromNamespaceAndPath("advancement-waypoints", "textures/gui/sprites/advancements/task_frame_selected.png");
+   private static final Identifier GOAL_ICON = Identifier.fromNamespaceAndPath("advancement-waypoints", "textures/gui/sprites/advancements/goal_frame_selected.png");
+   private static final Identifier CHALLENGE_ICON = Identifier.fromNamespaceAndPath("advancement-waypoints", "textures/gui/sprites/advancements/challenge_frame_selected.png");
+
    protected static final int FIELD_HEIGHT = 18;
    protected static final int BUTTON_HEIGHT = 20;
    protected static final int COORD_FIELD_WIDTH = 52;
@@ -35,15 +40,19 @@ public abstract class WaypointFormScreen extends BaseModScreen {
    protected String savedName;
    protected String savedDesc;
    protected String savedBackground;
+   protected String savedFrame;
    protected List<CoordRow> coordRows;
    protected boolean isVanilla;
    protected boolean hadParentBefore;
+   protected boolean lockParent = false;
    public Runnable onCloseAction;
    protected EditBox nameField;
    protected EditBox descField;
    protected Button iconButton;
+   protected Button frameButton;
    protected Button parentButton;
    protected Button bgButton;
+   protected PopupMenu frameMenu = new PopupMenu();
    protected float scale;
    protected int virtualWidth;
    protected int virtualHeight;
@@ -56,6 +65,7 @@ public abstract class WaypointFormScreen extends BaseModScreen {
       this.savedName = "";
       this.savedDesc = "";
       this.savedBackground = "";
+      this.savedFrame = "task";
       this.coordRows = new ArrayList();
       this.isVanilla = false;
       this.hadParentBefore = false;
@@ -73,6 +83,11 @@ public abstract class WaypointFormScreen extends BaseModScreen {
 
    protected boolean isRoot() {
       return this.selectedParentId == null && !this.isVanilla;
+   }
+
+   public WaypointFormScreen setLockParent(boolean lockParent) {
+      this.lockParent = lockParent;
+      return this;
    }
 
    protected boolean showParentField() {
@@ -164,13 +179,23 @@ public abstract class WaypointFormScreen extends BaseModScreen {
    }
 
    private int initNameAndIcon(int fieldLeft, int y) {
-      int buttonWidth = this.panelWidth - 40 - 25;
-      this.nameField = this.addBox(fieldLeft, y, this.panelWidth - 40, "advwp.hint.name", this.savedName);
+      int squareSize = 18;
+      int gap = 4;
+      int nameWidth = this.panelWidth - 40 - squareSize - gap;
+      this.nameField = this.addBox(fieldLeft, y, nameWidth, "advwp.hint.name", this.savedName);
       if (this.isVanilla) {
          this.nameField.setEditable(false);
       }
 
+      int frameBtnX = fieldLeft + nameWidth + gap;
+      final int frameY = y;
+      this.frameButton = (Button)this.addRenderableWidget(Button.builder(Component.literal(""), (b) -> {
+         this.openFrameContextMenu(frameBtnX, frameY + squareSize);
+      }).bounds(frameBtnX, y, squareSize, squareSize).build());
+      this.frameButton.active = !this.isVanilla;
+
       y += 22;
+      int buttonWidth = this.panelWidth - 40 - 25;
       this.iconButton = (Button)this.addRenderableWidget(Button.builder(Component.translatable("advwp.field.icon", new Object[]{this.iconId()}), (b) -> {
          this.setFocused((GuiEventListener)null);
          this.minecraft.gui.setScreen(new ItemPickerScreen(this, (item) -> this.selectedIcon = item));
@@ -178,6 +203,43 @@ public abstract class WaypointFormScreen extends BaseModScreen {
       this.iconButton.active = !this.isVanilla;
       y += 22;
       return y;
+   }
+
+   private void openFrameContextMenu(int x, int y) {
+      this.setFocused((GuiEventListener)null);
+      this.frameMenu.clear();
+      this.frameMenu.addSquareButton(
+         TASK_ICON,
+         Component.translatable("advwp.frame.task"),
+         () -> { this.savedFrame = "task"; },
+         true,
+         "task".equals(this.savedFrame)
+      );
+      this.frameMenu.addSquareButton(
+         GOAL_ICON,
+         Component.translatable("advwp.frame.goal"),
+         () -> { this.savedFrame = "goal"; },
+         true,
+         "goal".equals(this.savedFrame)
+      );
+      this.frameMenu.addSquareButton(
+         CHALLENGE_ICON,
+         Component.translatable("advwp.frame.challenge"),
+         () -> { this.savedFrame = "challenge"; },
+         true,
+         "challenge".equals(this.savedFrame)
+      );
+      this.frameMenu.show(x, y);
+   }
+
+   protected Identifier getFrameIcon(String frame) {
+      if ("goal".equals(frame)) {
+         return GOAL_ICON;
+      } else if ("challenge".equals(frame)) {
+         return CHALLENGE_ICON;
+      } else {
+         return TASK_ICON;
+      }
    }
 
    private int initParentField(int fieldLeft, int y, boolean awaitingParentSelection) {
@@ -188,7 +250,7 @@ public abstract class WaypointFormScreen extends BaseModScreen {
          this.hadParentBefore = this.selectedParentId != null;
          this.openParentPicker();
       }).bounds(fieldLeft, y, buttonWidth, 18).build());
-      this.parentButton.active = !this.isVanilla;
+      this.parentButton.active = !this.isVanilla && !this.lockParent;
       if (this.showResetParentButton()) {
          Button resetParentButton = (Button)this.addRenderableWidget(Button.builder(Component.translatable("advwp.field.parent.reset"), (b) -> {
             this.selectedParentId = null;
@@ -196,7 +258,7 @@ public abstract class WaypointFormScreen extends BaseModScreen {
             this.saveState();
             this.rebuildWidgets();
          }).bounds(fieldLeft + buttonWidth + 5, y, 20, 18).build());
-         resetParentButton.active = !this.isVanilla;
+         resetParentButton.active = !this.isVanilla && !this.lockParent;
       }
 
       return y + 18 + 4;
@@ -285,7 +347,14 @@ public abstract class WaypointFormScreen extends BaseModScreen {
    protected abstract void initActions(int var1, int var2);
 
    public boolean mouseClicked(MouseButtonEvent event, boolean unknown) {
-      return super.mouseClicked(new MouseButtonEvent(event.x() / (double)this.scale, event.y() / (double)this.scale, event.buttonInfo()), unknown);
+      double scaledX = event.x() / (double)this.scale;
+      double scaledY = event.y() / (double)this.scale;
+      if (this.frameMenu != null && this.frameMenu.isVisible()) {
+         if (this.frameMenu.mouseClicked(scaledX, scaledY, event.button())) {
+            return true;
+         }
+      }
+      return super.mouseClicked(new MouseButtonEvent(scaledX, scaledY, event.buttonInfo()), unknown);
    }
 
    public boolean mouseReleased(MouseButtonEvent event) {
@@ -311,6 +380,16 @@ public abstract class WaypointFormScreen extends BaseModScreen {
       int scaledMouseY = (int)((float)mouseY / this.scale);
       graphics.blit(RenderPipelines.GUI_TEXTURED, ModBackground.current(), this.panelX, this.panelY, 0.0F, 0.0F, this.panelWidth, this.panelHeight, this.panelWidth, this.panelHeight);
       super.extractRenderState(graphics, scaledMouseX, scaledMouseY, delta);
+      if (this.frameButton != null) {
+         Identifier icon = this.getFrameIcon(this.savedFrame);
+         if (icon != null) {
+            int iconSize = 14;
+            int ix = this.frameButton.getX() + (this.frameButton.getWidth() - iconSize) / 2;
+            int iy = this.frameButton.getY() + (this.frameButton.getHeight() - iconSize) / 2;
+            graphics.blit(RenderPipelines.GUI_TEXTURED, icon, ix, iy, 0.0F, 0.0F, iconSize, iconSize, iconSize, iconSize);
+         }
+      }
+
       if (this.iconButton != null) {
          this.iconButton.setMessage(Component.translatable("advwp.field.icon", new Object[]{this.iconId()}));
          graphics.item(new ItemStack(this.selectedIcon), this.iconButton.getX() + this.iconButton.getWidth() + 7, this.iconButton.getY() + 1);
@@ -339,6 +418,10 @@ public abstract class WaypointFormScreen extends BaseModScreen {
          }
       }
 
+      if (this.frameMenu != null && this.frameMenu.isVisible()) {
+         this.frameMenu.render(graphics, scaledMouseX, scaledMouseY, delta);
+      }
+
       graphics.pose().popMatrix();
    }
 
@@ -359,6 +442,14 @@ public abstract class WaypointFormScreen extends BaseModScreen {
 
    public void onParentSelected(Identifier newParent) {
       this.selectedParentId = newParent;
+      if (newParent != null && !com.listraind.advancementwaypoints.config.ModConfig.getInstance().isAllowAttachToAnyNode()) {
+         net.minecraft.client.multiplayer.ClientAdvancements advs = this.minecraft != null && this.minecraft.player != null ? this.minecraft.player.connection.getAdvancements() : null;
+         net.minecraft.advancements.AdvancementTree tree = advs != null ? advs.getTree() : null;
+         String effective = com.listraind.advancementwaypoints.advancement.LayoutCalculator.resolveEffectiveParentId(newParent.toString(), tree);
+         if (effective != null) {
+            this.selectedParentId = Identifier.parse(effective);
+         }
+      }
       if (!this.hadParentBefore && this.coordRows.isEmpty()) {
          CoordRow newRow = new CoordRow(this.currentDim());
          if (this.minecraft != null && this.minecraft.player != null) {

@@ -51,7 +51,7 @@ public class CreateWaypointScreen extends WaypointFormScreen {
                String uniqueId = WaypointStorage.generateUniqueId(namespace);
                String parentStr = this.selectedParentId != null ? this.selectedParentId.toString() : null;
                String bgVal = this.showBackgroundField() ? this.getBackgroundValue() : null;
-               JsonObject json = WaypointStorage.buildWaypointJson(uniqueId, this.colorCodes(this.nameField.getValue().trim()), this.iconId(), this.buildFinalDescription(), parentStr, bgVal);
+               JsonObject json = WaypointStorage.buildWaypointJson(uniqueId, this.colorCodes(this.nameField.getValue().trim()), this.iconId(), this.buildFinalDescription(), this.savedFrame, parentStr, bgVal);
                WaypointStorage.saveWaypoint(uniqueId, json);
                this.onCloseAction.run();
             }

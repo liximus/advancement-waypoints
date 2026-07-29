@@ -62,7 +62,15 @@ public class AdvancementInjector {
                bg = "minecraft:torch";
             }
 
-            result.add(new WaypointData(id, icon, title, desc, ConfigIO.str(o, "frame", "task"), bg, parent, p.x(), p.y()));
+            String frame = parseStringProperty(display, "frame");
+            if (frame == null) {
+               frame = parseStringProperty(o, "frame");
+            }
+            if (frame == null) {
+               frame = "task";
+            }
+
+            result.add(new WaypointData(id, icon, title, desc, frame, bg, parent, p.x(), p.y()));
          }
 
          return new LoadResult(result, Map.of());

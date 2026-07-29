@@ -42,6 +42,8 @@ public class MixinLocatorBarItem {
     private static final Identifier ARROW_DOWN_SPRITE =
         Identifier.fromNamespaceAndPath("minecraft", "hud/locator_bar_arrow_down");
 
+
+
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void advwp_renderPortalIconAlwaysAtCenter(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         ModConfig config = ModConfig.getInstance();
@@ -76,10 +78,7 @@ public class MixinLocatorBarItem {
 
     @Inject(
         method = "lambda$extractRenderState$1",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIIII)V"
-        ),
+        at = @At("HEAD"),
         cancellable = true
     )
     private void advwp_renderCustomItemOrPortalOnLocatorBar(
@@ -112,6 +111,13 @@ public class MixinLocatorBarItem {
             return;
         }
 
+        BlockPos nearest = mc.player != null ? nav.getNearest(dim, mc.player.blockPosition()) : null;
+        float alpha = nav.updateProximityAndGetAlpha(mc.player, nearest);
+        if (!nav.hasAnyTarget()) {
+            ci.cancel();
+            return;
+        }
+
         double angle = waypoint.yawAngleToCamera(level, new TrackedWaypoint.Camera() {
             @Override public float yaw() { return cameraEntity.getYRot(); }
             @Override public net.minecraft.world.phys.Vec3 position() { return cameraEntity.getEyePosition(); }
@@ -131,17 +137,30 @@ public class MixinLocatorBarItem {
         int itemSize = Math.round(16 * scale);
         int itemY = dotY - (itemSize - 9) / 2;
 
+        int barLeft = screenMiddle - 86;
+        int barRight = screenMiddle + 86;
+
+        if (dotX < barLeft || dotX > barRight) {
+            ci.cancel();
+            return;
+        }
+
         if (config.isShowItemOnLocator()) {
             ItemStack icon = WaypointLocatorMode.getCurrentTargetIcon();
             if (icon != null && !icon.isEmpty()) {
                 ci.cancel();
 
                 int itemX = dotX - itemSize / 2;
+                if (itemX < barLeft || itemX + itemSize > barRight) {
+                    return;
+                }
 
                 graphics.pose().pushMatrix();
                 graphics.pose().translate((float) itemX, (float) itemY);
                 graphics.pose().scale(scale, scale);
+                com.listraind.advancementwaypoints.navigator.ItemAlphaContext.setAlpha(alpha);
                 graphics.item(icon, 0, 0);
+                com.listraind.advancementwaypoints.navigator.ItemAlphaContext.reset();
                 graphics.pose().popMatrix();
 
                 TrackedWaypoint.Projector projector = (TrackedWaypoint.Projector) mc.gameRenderer;
@@ -158,9 +177,60 @@ public class MixinLocatorBarItem {
                         arrowY = Math.min(top - 6, itemY - 5);
                     }
 
-                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, arrowSprite, arrowX, arrowY, 7, 5);
+                    int iconColor = 0xFFFFFFFF;
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, arrowSprite, arrowX, arrowY, 7, 5, iconColor);
                 }
             }
         }
+    }
+
+    @org.spongepowered.asm.mixin.injection.Redirect(
+        method = "lambda$extractRenderState$1",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIIII)V"
+        )
+    )
+    private void advwp_pulseDotBlitSprite(
+        GuiGraphicsExtractor graphics,
+        com.mojang.blaze3d.pipeline.RenderPipeline pipeline,
+        Identifier sprite,
+        int x,
+        int y,
+        int width,
+        int height,
+        int color,
+        Entity cameraEntity,
+        Level level,
+        PartialTickSupplier partialTicks,
+        GuiGraphicsExtractor graphicsParam,
+        int top,
+        TrackedWaypoint waypoint
+    ) {
+        ModConfig config = ModConfig.getInstance();
+        if (config.isEnableNavigation() && config.getHudMode() == ModConfig.HudMode.LOCATOR) {
+            Navigator nav = Navigator.getInstance();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && waypoint != null) {
+                Navigator.Dimension dim = Navigator.Dimension.from(mc.player.level().dimension());
+                List<BlockPos> posList = dim != null ? nav.getTargetsForDimension(dim) : null;
+                boolean isDistanceDrawn = config.isShowDistanceOnLocator() && (posList != null && posList.size() == 1);
+
+                if (!isDistanceDrawn) {
+                    Entity entity = cameraEntity != null ? cameraEntity : mc.player;
+                    double distSq = waypoint.distanceSquared(entity);
+                    double radius = config.getAutoDisableRadius();
+                    if (distSq <= radius * radius) {
+                        BlockPos targetPos = dim != null ? nav.getNearest(dim, mc.player.blockPosition()) : null;
+                        float alpha = nav.updateProximityAndGetAlpha(mc.player, targetPos);
+                        if (alpha < 1.0f) {
+                            int a = (int) (255 * alpha);
+                            color = (a << 24) | (color & 0x00FFFFFF);
+                        }
+                    }
+                }
+            }
+        }
+        graphics.blitSprite(pipeline, sprite, x, y, width, height, color);
     }
 }

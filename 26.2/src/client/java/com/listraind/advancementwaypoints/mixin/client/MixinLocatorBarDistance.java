@@ -91,10 +91,15 @@ public class MixinLocatorBarDistance {
         int x = (g.guiWidth() - textWidth) / 2;
         int y = g.guiHeight() - 24 - 9 - 2;
 
-        g.text(font, text, x + 1, y, 0xFF000000, false);
-        g.text(font, text, x - 1, y, 0xFF000000, false);
-        g.text(font, text, x, y + 1, 0xFF000000, false);
-        g.text(font, text, x, y - 1, 0xFF000000, false);
-        g.text(font, text, x, y, 0xFF80FF20, false);
+        float alpha = nav.updateProximityAndGetAlpha(player, target);
+        int a = (int) (255 * alpha);
+        int shadowColor = a << 24;
+        int greenColor = (a << 24) | 0x80FF20;
+
+        g.text(font, text, x + 1, y, shadowColor, false);
+        g.text(font, text, x - 1, y, shadowColor, false);
+        g.text(font, text, x, y + 1, shadowColor, false);
+        g.text(font, text, x, y - 1, shadowColor, false);
+        g.text(font, text, x, y, greenColor, false);
     }
 }

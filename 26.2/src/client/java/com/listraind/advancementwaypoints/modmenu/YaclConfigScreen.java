@@ -6,6 +6,7 @@ import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.YetAnotherConfigLib;
 import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
+import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,6 +19,10 @@ public class YaclConfigScreen {
    private static Option<ModConfig.HudPosition> hudPositionOpt;
    private static Option<Boolean> showDistanceOpt;
    private static Option<Boolean> showItemOpt;
+   private static Option<Integer> autoDisableRadiusOpt;
+   private static Option<Integer> autoDisableTimeOpt;
+   private static Option<Boolean> proximityPulseOpt;
+   private static Option<ModConfig.PulseSpeed> pulseSpeedOpt;
 
    public static Screen create(Screen parent) {
       ModConfig config = ModConfig.getInstance();
@@ -56,6 +61,38 @@ public class YaclConfigScreen {
             .available(navEnabled && isLocatorMode)
             .build();
 
+      autoDisableRadiusOpt = Option.<Integer>createBuilder()
+            .name(Component.translatable("advwp.config.auto_disable_radius"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.auto_disable_radius.desc")))
+            .binding(32, config::getAutoDisableRadius, (Consumer<Integer>) config::setAutoDisableRadius)
+            .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(0, 128).step(1))
+            .available(navEnabled)
+            .build();
+
+      autoDisableTimeOpt = Option.<Integer>createBuilder()
+            .name(Component.translatable("advwp.config.auto_disable_time"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.auto_disable_time.desc")))
+            .binding(10, config::getAutoDisableTime, (Consumer<Integer>) config::setAutoDisableTime)
+            .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(1, 60).step(1))
+            .available(navEnabled)
+            .build();
+
+      proximityPulseOpt = Option.<Boolean>createBuilder()
+            .name(Component.translatable("advwp.config.proximity_pulse"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.proximity_pulse.desc")))
+            .binding(true, config::isEnableProximityPulse, (Consumer<Boolean>) config::setEnableProximityPulse)
+            .controller(TickBoxControllerBuilder::create)
+            .available(navEnabled)
+            .build();
+
+      pulseSpeedOpt = Option.<ModConfig.PulseSpeed>createBuilder()
+            .name(Component.translatable("advwp.config.pulse_speed"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.pulse_speed.desc")))
+            .binding(ModConfig.PulseSpeed.MEDIUM, config::getPulseSpeed, (Consumer<ModConfig.PulseSpeed>) config::setPulseSpeed)
+            .controller(opt -> EnumControllerBuilder.create(opt).enumClass(ModConfig.PulseSpeed.class))
+            .available(navEnabled)
+            .build();
+
       hudModeOpt = Option.<ModConfig.HudMode>createBuilder()
             .name(Component.translatable("advwp.config.hud_mode"))
             .description(OptionDescription.of(Component.translatable("advwp.config.hud_mode.desc")))
@@ -79,6 +116,13 @@ public class YaclConfigScreen {
             })
             .build();
 
+      Option<Boolean> allowAttachToAnyNodeOpt = Option.<Boolean>createBuilder()
+            .name(Component.translatable("advwp.config.allow_attach_to_any_node"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.allow_attach_to_any_node.desc")))
+            .binding(false, config::isAllowAttachToAnyNode, (Consumer<Boolean>) config::setAllowAttachToAnyNode)
+            .controller(TickBoxControllerBuilder::create)
+            .build();
+
       ConfigCategory generalCategory = ConfigCategory.createBuilder()
             .name(Component.translatable("advwp.config.category.general"))
             .option(chatScannerOpt)
@@ -91,12 +135,22 @@ public class YaclConfigScreen {
             .option(hudPositionOpt)
             .option(showDistanceOpt)
             .option(showItemOpt)
+            .option(autoDisableRadiusOpt)
+            .option(autoDisableTimeOpt)
+            .option(proximityPulseOpt)
+            .option(pulseSpeedOpt)
+            .build();
+
+      ConfigCategory waypointManagementCategory = ConfigCategory.createBuilder()
+            .name(Component.translatable("advwp.config.category.waypoint_management"))
+            .option(allowAttachToAnyNodeOpt)
             .build();
 
       return YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("advwp.config.title"))
             .category(generalCategory)
             .category(navigationCategory)
+            .category(waypointManagementCategory)
             .save(config::save)
             .build()
             .generateScreen(parent);
@@ -108,5 +162,9 @@ public class YaclConfigScreen {
       if (hudPositionOpt != null) hudPositionOpt.setAvailable(navEnabled && !isLoc);
       if (showDistanceOpt != null) showDistanceOpt.setAvailable(navEnabled && isLoc);
       if (showItemOpt != null) showItemOpt.setAvailable(navEnabled && isLoc);
+      if (autoDisableRadiusOpt != null) autoDisableRadiusOpt.setAvailable(navEnabled);
+      if (autoDisableTimeOpt != null) autoDisableTimeOpt.setAvailable(navEnabled);
+      if (proximityPulseOpt != null) proximityPulseOpt.setAvailable(navEnabled);
+      if (pulseSpeedOpt != null) pulseSpeedOpt.setAvailable(navEnabled);
    }
 }

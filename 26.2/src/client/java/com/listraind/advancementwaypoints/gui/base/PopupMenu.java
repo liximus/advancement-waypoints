@@ -35,18 +35,31 @@ public class PopupMenu {
       this.squareButtons.clear();
    }
 
-   public PopupMenu addTextButton(Component label, MenuAction action, boolean active) {
-      this.textItems.add(new TextItem(label, action, active));
+   public PopupMenu addTextButton(Component label, MenuAction action, boolean active, boolean selected) {
+      this.textItems.add(new TextItem((Identifier)null, label, action, active, selected));
       return this;
+   }
+
+   public PopupMenu addTextButton(Identifier icon, Component label, MenuAction action, boolean active, boolean selected) {
+      this.textItems.add(new TextItem(icon, label, action, active, selected));
+      return this;
+   }
+
+   public PopupMenu addTextButton(Component label, MenuAction action, boolean active) {
+      return this.addTextButton((Identifier)null, label, action, active, false);
    }
 
    public PopupMenu addTextButton(Component label, MenuAction action) {
-      return this.addTextButton(label, action, true);
+      return this.addTextButton((Identifier)null, label, action, true, false);
+   }
+
+   public PopupMenu addSquareButton(Identifier icon, Component tooltip, MenuAction action, boolean active, boolean selected) {
+      this.squareItems.add(new SquareItem(icon, tooltip, action, active, selected));
+      return this;
    }
 
    public PopupMenu addSquareButton(Identifier icon, Component tooltip, MenuAction action, boolean active) {
-      this.squareItems.add(new SquareItem(icon, tooltip, action, active));
-      return this;
+      return this.addSquareButton(icon, tooltip, action, active, false);
    }
 
    public PopupMenu setOnHideCallback(Runnable callback) {
@@ -65,7 +78,7 @@ public class PopupMenu {
          int minWidth = 100;
 
          for(TextItem item : this.textItems) {
-            int w = font.width(item.label.getString()) + 6 + 16;
+            int w = font.width(item.label.getString()) + 6 + 16 + (item.icon != null ? 14 : 0);
             if (w > minWidth) {
                minWidth = w;
             }
@@ -168,18 +181,48 @@ public class PopupMenu {
       if (this.visible) {
          g.blit(RenderPipelines.GUI_TEXTURED, ModBackground.current(), this.x, this.y, 0.0F, 0.0F, this.menuWidth, this.menuHeight, this.menuWidth, this.menuHeight);
 
-         for(Button btn : this.textButtons) {
+         for(int i = 0; i < this.textButtons.size(); ++i) {
+            Button btn = (Button)this.textButtons.get(i);
             btn.extractRenderState(g, mx, my, pt);
+            TextItem item = (TextItem)this.textItems.get(i);
+            int bx = btn.getX();
+            int by = btn.getY();
+            int bw = btn.getWidth();
+            int bh = btn.getHeight();
+            if (item.selected) {
+               g.fill(bx, by, bx + bw, by + bh, 0x4000FF00);
+               g.fill(bx, by, bx + bw, by + 1, -16711936);
+               g.fill(bx, by + bh - 1, bx + bw, by + bh, -16711936);
+               g.fill(bx, by, bx + 1, by + bh, -16711936);
+               g.fill(bx + bw - 1, by, bx + bw, by + bh, -16711936);
+            }
+            if (item.icon != null) {
+               int iconSize = 11;
+               int ix = bx + 4;
+               int iy = by + (bh - iconSize) / 2;
+               g.blit(RenderPipelines.GUI_TEXTURED, item.icon, ix, iy, 0.0F, 0.0F, iconSize, iconSize, iconSize, iconSize);
+            }
          }
 
          for(int i = 0; i < this.squareButtons.size(); ++i) {
             Button btn = (Button)this.squareButtons.get(i);
             btn.extractRenderState(g, mx, my, pt);
             SquareItem item = (SquareItem)this.squareItems.get(i);
+            int bx = btn.getX();
+            int by = btn.getY();
+            int bw = btn.getWidth();
+            int bh = btn.getHeight();
+            if (item.selected) {
+               g.fill(bx, by, bx + bw, by + bh, 0x4000FF00);
+               g.fill(bx, by, bx + bw, by + 1, -16711936);
+               g.fill(bx, by + bh - 1, bx + bw, by + bh, -16711936);
+               g.fill(bx, by, bx + 1, by + bh, -16711936);
+               g.fill(bx + bw - 1, by, bx + bw, by + bh, -16711936);
+            }
             if (item.icon != null) {
-               int iconSize = 11;
-               int ix = btn.getX() + (btn.getWidth() - iconSize) / 2;
-               int iy = btn.getY() + (btn.getHeight() - iconSize) / 2;
+               int iconSize = Math.min(14, bw - 4);
+               int ix = bx + (bw - iconSize) / 2;
+               int iy = by + (bh - iconSize) / 2;
                g.blit(RenderPipelines.GUI_TEXTURED, item.icon, ix, iy, 0.0F, 0.0F, iconSize, iconSize, iconSize, iconSize);
             }
          }
@@ -235,14 +278,22 @@ public class PopupMenu {
    }
 
    public static class TextItem {
+      public final Identifier icon;
       public final Component label;
       public final MenuAction action;
       public final boolean active;
+      public final boolean selected;
 
-      public TextItem(Component label, MenuAction action, boolean active) {
+      public TextItem(Identifier icon, Component label, MenuAction action, boolean active, boolean selected) {
+         this.icon = icon;
          this.label = label;
          this.action = action;
          this.active = active;
+         this.selected = selected;
+      }
+
+      public TextItem(Component label, MenuAction action, boolean active) {
+         this((Identifier)null, label, action, active, false);
       }
    }
 
@@ -251,12 +302,18 @@ public class PopupMenu {
       public final Component tooltip;
       public final MenuAction action;
       public final boolean active;
+      public final boolean selected;
 
-      public SquareItem(Identifier icon, Component tooltip, MenuAction action, boolean active) {
+      public SquareItem(Identifier icon, Component tooltip, MenuAction action, boolean active, boolean selected) {
          this.icon = icon;
          this.tooltip = tooltip;
          this.action = action;
          this.active = active;
+         this.selected = selected;
+      }
+
+      public SquareItem(Identifier icon, Component tooltip, MenuAction action, boolean active) {
+         this(icon, tooltip, action, active, false);
       }
    }
 

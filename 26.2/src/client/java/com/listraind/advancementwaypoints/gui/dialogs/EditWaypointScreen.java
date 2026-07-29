@@ -56,6 +56,12 @@ public class EditWaypointScreen extends WaypointFormScreen {
          this.savedDesc = d.isJsonObject() ? this.parseTextFromComponentJson(d.getAsJsonObject()) : d.getAsString();
       }
 
+      if (display.has("frame") && !display.get("frame").isJsonNull()) {
+         this.savedFrame = display.get("frame").getAsString();
+      } else if (data.has("frame") && !data.get("frame").isJsonNull()) {
+         this.savedFrame = data.get("frame").getAsString();
+      }
+
       if (display.has("background") && !display.get("background").isJsonNull()) {
          this.savedBackground = display.get("background").getAsString();
       }
@@ -119,16 +125,16 @@ public class EditWaypointScreen extends WaypointFormScreen {
             if (parentChanged && !children.isEmpty()) {
                this.minecraft.gui.setScreen(new ConfirmParentChangeScreen(this, () -> {
                   WaypointStorage.reparentChildren(this.fullId, this.initialParentId);
-                  JsonObject updated = WaypointStorage.buildWaypointJson(this.fullId, titleVal, this.iconId(), this.buildFinalDescription(), newParentVal, bgVal);
+                  JsonObject updated = WaypointStorage.buildWaypointJson(this.fullId, titleVal, this.iconId(), this.buildFinalDescription(), this.savedFrame, newParentVal, bgVal);
                   WaypointStorage.saveWaypoint(this.fullId, updated);
                   this.onCloseAction.run();
                }, () -> {
-                  JsonObject updated = WaypointStorage.buildWaypointJson(this.fullId, titleVal, this.iconId(), this.buildFinalDescription(), newParentVal, bgVal);
+                  JsonObject updated = WaypointStorage.buildWaypointJson(this.fullId, titleVal, this.iconId(), this.buildFinalDescription(), this.savedFrame, newParentVal, bgVal);
                   WaypointStorage.saveWaypoint(this.fullId, updated);
                   this.onCloseAction.run();
                }));
             } else {
-               JsonObject updated = WaypointStorage.buildWaypointJson(this.fullId, titleVal, this.iconId(), this.buildFinalDescription(), newParentVal, bgVal);
+               JsonObject updated = WaypointStorage.buildWaypointJson(this.fullId, titleVal, this.iconId(), this.buildFinalDescription(), this.savedFrame, newParentVal, bgVal);
                WaypointStorage.saveWaypoint(this.fullId, updated);
                this.onCloseAction.run();
             }

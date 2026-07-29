@@ -183,14 +183,13 @@ public class AdvancementScreenHandler {
         } else {
             Navigator nav = Navigator.getInstance();
             if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
-                nav.setCurrentId(id);
                 nav.clearAll();
+                nav.setCurrentId(id);
                 targets.forEach((dim, posList) -> {
                     if (posList != null) nav.setTargets(dim, posList);
                 });
             } else {
                 nav.clearAll();
-                nav.setCurrentId(null);
             }
             if (targets != null) Minecraft.getInstance().gui.setScreen(null);
         }

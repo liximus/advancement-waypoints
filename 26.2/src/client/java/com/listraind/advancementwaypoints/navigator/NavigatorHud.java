@@ -44,21 +44,23 @@ public class NavigatorHud {
       if (!ModConfig.getInstance().isEnableNavigation()) return;
       Navigator nav = Navigator.getInstance();
       if (nav.hasAnyTarget()) {
-         if (ModConfig.getInstance().getHudMode() == ModConfig.HudMode.LOCATOR) return;
-
          Minecraft mc = Minecraft.getInstance();
          Player player = mc.player;
          if (player != null) {
             Navigator.Dimension dim = Navigator.Dimension.from(player.level().dimension());
             if (dim != null) {
                BlockPos target = nav.getNearest(dim, player.blockPosition());
+               float alpha = nav.updateProximityAndGetAlpha(player, target);
+               if (!nav.hasAnyTarget()) return;
+               if (ModConfig.getInstance().getHudMode() == ModConfig.HudMode.LOCATOR) return;
+
                int sw = mc.getWindow().getGuiScaledWidth();
                int sh = mc.getWindow().getGuiScaledHeight();
                if (target != null) {
                   if (ModConfig.getInstance().getHudMode() == ModConfig.HudMode.COMPASS) {
-                     this.renderCompass(g, mc, player, target, sw, sh);
+                     this.renderCompass(g, mc, player, target, sw, sh, alpha);
                   } else {
-                     this.renderArrow(g, mc, player, target, sw, sh);
+                     this.renderArrow(g, mc, player, target, sw, sh, alpha);
                   }
                } else {
                   this.renderPortal(g, sw, sh);
@@ -69,7 +71,7 @@ public class NavigatorHud {
       }
    }
 
-   private void renderArrow(GuiGraphicsExtractor g, Minecraft mc, Player player, BlockPos target, int sw, int sh) {
+   private void renderArrow(GuiGraphicsExtractor g, Minecraft mc, Player player, BlockPos target, int sw, int sh, float alpha) {
       double dx = (double)target.getX() + (double)0.5F - player.getX();
       double dz = (double)target.getZ() + (double)0.5F - player.getZ();
       double dist = Math.sqrt(dx * dx + dz * dz);
@@ -105,17 +107,19 @@ public class NavigatorHud {
          }
       }
 
+      int iconColor = -1;
+
       g.fill(cx - 8 - 4, cy - 8 - 4, cx + 8 + 4, cy + 8 + 4, Integer.MIN_VALUE);
       g.pose().pushMatrix();
       g.pose().translate((float)cx, (float)cy);
       g.pose().rotate(rot);
       g.pose().translate(-8.0F, -8.0F);
-      g.blit(RenderPipelines.GUI_TEXTURED, ARROW, 0, 0, 0.0F, 0.0F, 16, 16, 16, 16);
+      g.blit(RenderPipelines.GUI_TEXTURED, ARROW, 0, 0, 0.0F, 0.0F, 16, 16, 16, 16, iconColor);
       g.pose().popMatrix();
       g.text(mc.font, text, cx - tw / 2, ty, -1, true);
    }
 
-   private void renderCompass(GuiGraphicsExtractor g, Minecraft mc, Player player, BlockPos target, int sw, int sh) {
+   private void renderCompass(GuiGraphicsExtractor g, Minecraft mc, Player player, BlockPos target, int sw, int sh, float alpha) {
       double dx = (double)target.getX() + 0.5D - player.getX();
       double dz = (double)target.getZ() + 0.5D - player.getZ();
       double dist = Math.sqrt(dx * dx + dz * dz);
@@ -156,13 +160,16 @@ public class NavigatorHud {
          }
       }
 
+      int iconAlpha = (int)(255 * alpha);
+      int iconColor = (iconAlpha << 24) | 0xFFFFFF;
+
       g.fill(cx - hs - 4, cy - hs - 4, cx + hs + 4, cy + hs + 4, Integer.MIN_VALUE);
 
       g.pose().pushMatrix();
       g.pose().translate((float)cx, (float)cy);
       g.pose().scale(1.5F, 1.5F);
       g.pose().translate(-8.0F, -8.0F);
-      g.blit(RenderPipelines.GUI_TEXTURED, COMPASS_TEXTURES[frame], 0, 0, 0.0F, 0.0F, 16, 16, 16, 16);
+      g.blit(RenderPipelines.GUI_TEXTURED, COMPASS_TEXTURES[frame], 0, 0, 0.0F, 0.0F, 16, 16, 16, 16, iconColor);
       g.pose().popMatrix();
 
       g.text(mc.font, text, cx - tw / 2, ty, -1, true);
