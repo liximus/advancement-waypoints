@@ -155,8 +155,26 @@ public class AdvancementScreenHandler {
                 }
             });
         } else if (btn == 1 && isTabAreaClicked(screen, mx, my, tabs)) {
-            showTabContextMenu(mx, my);
+            AdvancementTab tab = findClickedTab(screen, mx, my, tabs);
+            showTabContextMenu(mx, my, tab);
         }
+    }
+
+    @Nullable
+    private AdvancementTab findClickedTab(Screen screen, double mx, double my, Map<AdvancementHolder, AdvancementTab> tabs) {
+        int captX = AdvancementTabCapture.getX();
+        int captY = AdvancementTabCapture.getY();
+        int panelLeft = (captX != 0 || captY != 0) ? captX - 9 : (screen.width - AdvancementsScreen.WINDOW_WIDTH) / 2;
+        int panelTop = (captX != 0 || captY != 0) ? captY - 18 : (screen.height - AdvancementsScreen.WINDOW_HEIGHT) / 2;
+
+        if (tabs != null) {
+            for (AdvancementTab tab : tabs.values()) {
+                if (tab.isMouseOver(panelLeft, panelTop, mx, my)) {
+                    return tab;
+                }
+            }
+        }
+        return null;
     }
 
     private boolean isTabAreaClicked(Screen screen, double mx, double my, Map<AdvancementHolder, AdvancementTab> tabs) {
@@ -202,8 +220,12 @@ public class AdvancementScreenHandler {
     }
 
     public void showTabContextMenu(double mx, double my) {
+        showTabContextMenu(mx, my, null);
+    }
+
+    public void showTabContextMenu(double mx, double my, @Nullable AdvancementTab tab) {
         if (contextMenu == null) contextMenu = new AdvancementContextMenu();
-        contextMenu.showTabMenu((int) mx, (int) my);
+        contextMenu.showTabMenu((int) mx, (int) my, tab);
         contextMenu.setLastScreen(advancementsLastScreen);
     }
 

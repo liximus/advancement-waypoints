@@ -97,7 +97,7 @@ public class EditWaypointScreen extends WaypointFormScreen {
    }
 
    protected boolean showCoordsField() {
-      return true;
+      return !this.isRoot() && this.selectedParentId != null;
    }
 
    private void parseCoordsFromDesc() {
@@ -114,6 +114,15 @@ public class EditWaypointScreen extends WaypointFormScreen {
 
    protected void initActions(int centerX, int y) {
       int formWidth = this.panelWidth - 40;
+      int gap = 6;
+      int cancelWidth = (formWidth - gap) * 30 / 100;
+      int saveWidth = (formWidth - gap) - cancelWidth;
+      int leftX = centerX - formWidth / 2;
+
+      this.addRenderableWidget(Button.builder(Component.translatable("advwp.dialog.cancel").withStyle(net.minecraft.ChatFormatting.GRAY), (b) -> {
+         this.onClose();
+      }).bounds(leftX, y, cancelWidth, 20).build());
+
       Button actionButton = (Button)this.addRenderableWidget(Button.builder(this.isVanilla ? Component.translatable("advwp.button.read_only") : Component.translatable("advwp.action.save"), (b) -> {
          if (!this.isVanilla) {
             this.saveState();
@@ -140,7 +149,7 @@ public class EditWaypointScreen extends WaypointFormScreen {
             }
 
          }
-      }).bounds(centerX - formWidth / 2, y, formWidth, 20).build());
+      }).bounds(leftX + cancelWidth + gap, y, saveWidth, 20).build());
       if (this.isVanilla) {
          actionButton.active = false;
       }

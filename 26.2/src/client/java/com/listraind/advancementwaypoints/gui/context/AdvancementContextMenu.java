@@ -27,6 +27,7 @@ public class AdvancementContextMenu {
     private static final Identifier CREATE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/create.png");
     private static final Identifier EDIT_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/edit.png");
     private static final Identifier DELETE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/delete.png");
+    private static final Identifier HIDE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/hide.png");
 
     private final PopupMenu menu = new PopupMenu();
     private TargetSelectionMenu targetSelectionMenu;
@@ -98,6 +99,10 @@ public class AdvancementContextMenu {
     }
 
     public void showTabMenu(int mouseX, int mouseY) {
+        showTabMenu(mouseX, mouseY, null);
+    }
+
+    public void showTabMenu(int mouseX, int mouseY, net.minecraft.client.gui.screens.advancements.AdvancementTab tab) {
         this.advancementId = null;
         this.targets = null;
         if (targetSelectionMenu != null) targetSelectionMenu.hide();
@@ -106,16 +111,60 @@ public class AdvancementContextMenu {
         if (minecraft.gui.screen() == null) return;
 
         menu.clear();
-        menu.addTextButton(Component.translatable("advwp.context.create_tab"), () -> {
-            CreateWaypointScreen screen = new CreateWaypointScreen(true);
-            screen.onCloseAction = () -> reopenAdvancementsScreen(minecraft);
-            minecraft.gui.setScreen(screen);
-        });
-
         menu.addTextButton(Component.translatable("advwp.context.tab_visibility"), () -> {
             TabVisibilityScreen screen = new TabVisibilityScreen(lastScreen);
             minecraft.gui.setScreen(screen);
         });
+
+        boolean isCustom = false;
+        String rootId = null;
+        if (tab != null) {
+            net.minecraft.advancements.AdvancementNode rootNode = ((com.listraind.advancementwaypoints.mixin.client.AdvancementTabAccessor) tab).getRootNode();
+            if (rootNode != null) {
+                rootId = rootNode.holder().id().toString();
+                isCustom = rootId.startsWith("advwaypoints:");
+            }
+        }
+
+        final String finalRootId = rootId;
+        final boolean finalIsCustom = isCustom;
+        final boolean hasTab = (tab != null && finalRootId != null);
+
+        menu.addSquareButton(CREATE_ICON, Component.translatable("advwp.context.create_tab"), () -> {
+            CreateWaypointScreen screen = new CreateWaypointScreen(true);
+            screen.onCloseAction = () -> reopenAdvancementsScreen(minecraft);
+            minecraft.gui.setScreen(screen);
+        }, true);
+
+        menu.addSquareButton(EDIT_ICON, Component.translatable("advwp.context.sq_edit"), () -> {
+            if (finalRootId != null) {
+                JsonObject data = WaypointStorage.getWaypointOrVanilla(Identifier.parse(finalRootId));
+                EditWaypointScreen screen = new EditWaypointScreen(data);
+                screen.onCloseAction = () -> reopenAdvancementsScreen(minecraft);
+                minecraft.gui.setScreen(screen);
+            }
+        }, hasTab && finalIsCustom);
+
+        menu.addSquareButton(DELETE_ICON, Component.translatable("advwp.context.sq_del"), () -> {
+            if (finalRootId != null) {
+                minecraft.gui.setScreen(new ConfirmDeleteScreen(
+                        new AdvancementsScreen(minecraft.player.connection.getAdvancements(), lastScreen),
+                        Component.translatable("advwp.dialog.delete_tab.title"),
+                        Component.translatable("advwp.dialog.delete_tab.message"),
+                        () -> {
+                            WaypointStorage.deleteWaypoint(finalRootId);
+                            reopenAdvancementsScreen(minecraft);
+                        }
+                ));
+            }
+        }, hasTab && finalIsCustom);
+
+        menu.addSquareButton(HIDE_ICON, Component.translatable("advwp.context.hide_tab"), () -> {
+            if (finalRootId != null) {
+                WaypointStorage.setTabHidden(finalRootId, true);
+                reopenAdvancementsScreen(minecraft);
+            }
+        }, hasTab);
 
         menu.show(mouseX, mouseY);
     }

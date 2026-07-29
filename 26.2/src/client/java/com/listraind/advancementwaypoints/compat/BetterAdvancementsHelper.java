@@ -1,9 +1,10 @@
-package com.listraind.advancementwaypoints.mixin.compat;
+package com.listraind.advancementwaypoints.compat;
 
 import betteradvancements.common.gui.BetterAdvancementTab;
 import betteradvancements.common.gui.BetterAdvancementWidget;
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
+import com.listraind.advancementwaypoints.mixin.compat.BetterAdvancementTabAccessor;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.client.gui.components.Button;
@@ -78,6 +79,8 @@ public class BetterAdvancementsHelper {
                 boolean hovered;
                 if (isPlaneAdv) {
                     hovered = com.listraind.advancementwaypoints.compat.PlaneAdvancementsHelper.isWidgetHovered(w, scrollX, scrollY, mx, my, left + 9, top + 18);
+                } else if (w instanceof BetterAdvancementWidget bw) {
+                    hovered = bw.isMouseOver(scrollX, scrollY, relX, relY, zoom);
                 } else {
                     if (cachedIsMouseOverMethod == null) {
                         cachedIsMouseOverMethod = w.getClass().getMethod(
@@ -96,10 +99,14 @@ public class BetterAdvancementsHelper {
                     if (node != null) holder = node.holder();
                 }
                 if (holder == null && w instanceof BetterAdvancementWidget bw) {
-                    for (Map.Entry<AdvancementHolder, BetterAdvancementWidget> entry : tab.getWidgets().entrySet()) {
-                        if (entry.getValue() == bw) {
-                            holder = entry.getKey();
-                            break;
+                    if (bw.getAdvancement() != null) {
+                        holder = bw.getAdvancement().holder();
+                    } else {
+                        for (Map.Entry<AdvancementHolder, BetterAdvancementWidget> entry : tab.getWidgets().entrySet()) {
+                            if (entry.getValue() == bw) {
+                                holder = entry.getKey();
+                                break;
+                            }
                         }
                     }
                 }
@@ -109,7 +116,7 @@ public class BetterAdvancementsHelper {
                 }
             }
         } catch (Exception e) {
-            AdvancementWaypoints.LOGGER.error("Failed to invoke isMouseOver in BetterAdvancementsHelper", e);
+            AdvancementWaypoints.LOGGER.error("Failed to check hovered advancement in BetterAdvancementsHelper", e);
         }
         return null;
     }

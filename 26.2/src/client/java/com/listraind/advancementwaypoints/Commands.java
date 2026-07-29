@@ -23,7 +23,10 @@ public class Commands {
             AdvancementWaypointsClient.reloadAdvancements();
             return 1;
          }))));
-      ClientCommandRegistrationCallback.EVENT.register((ClientCommandRegistrationCallback)(dispatcher, access) -> dispatcher.register((LiteralArgumentBuilder)ClientCommands.literal("navigate").then(ClientCommands.argument("x", IntegerArgumentType.integer()).then(((RequiredArgumentBuilder)ClientCommands.argument("y|z", IntegerArgumentType.integer()).then(ClientCommands.argument("z", IntegerArgumentType.integer()).executes((ctx) -> {
+      ClientCommandRegistrationCallback.EVENT.register((ClientCommandRegistrationCallback)(dispatcher, access) -> dispatcher.register((LiteralArgumentBuilder)ClientCommands.literal("navigate").executes((ctx) -> {
+            AdvancementWaypointsClient.clearNavigation();
+            return 1;
+         }).then(ClientCommands.argument("x", IntegerArgumentType.integer()).then(((RequiredArgumentBuilder)ClientCommands.argument("y|z", IntegerArgumentType.integer()).then(ClientCommands.argument("z", IntegerArgumentType.integer()).executes((ctx) -> {
             int x = IntegerArgumentType.getInteger(ctx, "x");
             int y = IntegerArgumentType.getInteger(ctx, "y|z");
             int z = IntegerArgumentType.getInteger(ctx, "z");

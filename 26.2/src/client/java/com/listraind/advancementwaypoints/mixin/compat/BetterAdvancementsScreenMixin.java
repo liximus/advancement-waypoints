@@ -4,6 +4,7 @@ import betteradvancements.common.gui.BetterAdvancementTab;
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.advancement.CoordParser;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
+import com.listraind.advancementwaypoints.compat.BetterAdvancementsHelper;
 import com.listraind.advancementwaypoints.compat.IBetterAdvancementTab;
 import com.listraind.advancementwaypoints.compat.IBetterAdvancementsScreen;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
@@ -88,9 +89,10 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
         }
     }
 
-    @Inject(method = "mouseReleased", at = @At("HEAD"))
-    private void onMouseReleased(MouseButtonEvent event, CallbackInfoReturnable<Boolean> cir) {
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
         advWp_handleRelease(event.x(), event.y(), event.button());
+        return super.mouseReleased(event);
     }
 
     @Unique

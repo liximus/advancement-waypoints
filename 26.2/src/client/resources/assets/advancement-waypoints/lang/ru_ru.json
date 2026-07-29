@@ -50,9 +50,9 @@
 
   "advwp.parent.none": "нет",
 
+  "key.category.advancement-waypoints.key_category": "Advancement Waypoints",
   "advwp.key.category": "Advancement Waypoints",
-  "advwp.key.open_menu": "Открыть меню",
-  "advwp.key.clear_nav": "Очистить навигатор",
+  "advwp.key.clear_nav": "Отключить навигацию",
 
   "advwp.context.navigate": "§aНавигация",
   "advwp.context.teleport": "§aТелепорт",
@@ -74,7 +74,12 @@
   "advwp.dialog.delete.message": "Вы уверены, что хотите удалить вейпоинт?",
   "advwp.dialog.delete.confirm": "§cУдалить",
 
+  "advwp.dialog.delete_tab.title": "§8Удаление вкладки",
+  "advwp.dialog.delete_tab.message": "Вы уверены, что хотите удалить эту вкладку?",
+
   "advwp.context.create_tab": "Создать вкладку",
+  "advwp.context.hide_tab": "Скрыть вкладку",
+  "advwp.context.delete_tab": "Удалить вкладку",
   "advwp.screen.create_tab": "Создание вкладки",
   "advwp.context.hide_branch": "§6Скрыть ветку",
   "advwp.context.show_branch": "§aПоказать ветку",

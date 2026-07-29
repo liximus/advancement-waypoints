@@ -19,14 +19,9 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
    public void onInitializeClient() {
       Navigator.getInstance().initHud();
       KeyMapping.Category keyCategory = new KeyMapping.Category(Identifier.fromNamespaceAndPath("advancement-waypoints", "key_category"));
-      KeyMapping openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("advwp.key.open_menu", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), keyCategory));
       KeyMapping clearNavKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("advwp.key.clear_nav", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), keyCategory));
       ClientTickEvents.END_CLIENT_TICK.register((ClientTickEvents.EndTick)(client) -> {
          WaypointLocatorMode.getInstance().tick();
-
-         while(openKey.consumeClick()) {
-            client.execute(() -> client.gui.setScreen(new MainMenuScreen()));
-         }
 
          while(clearNavKey.consumeClick()) {
             clearNavigation();
@@ -41,7 +36,7 @@ public class AdvancementWaypointsClient implements ClientModInitializer {
       });
    }
 
-   private static void clearNavigation() {
+   public static void clearNavigation() {
       Navigator nav = Navigator.getInstance();
       nav.clearAll();
       nav.setCurrentId((Identifier)null);

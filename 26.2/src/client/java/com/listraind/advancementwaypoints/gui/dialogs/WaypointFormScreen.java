@@ -99,7 +99,7 @@ public abstract class WaypointFormScreen extends BaseModScreen {
    }
 
    protected boolean showCoordsField() {
-      return true;
+      return !this.isRoot() && this.selectedParentId != null;
    }
 
    protected boolean showResetParentButton() {

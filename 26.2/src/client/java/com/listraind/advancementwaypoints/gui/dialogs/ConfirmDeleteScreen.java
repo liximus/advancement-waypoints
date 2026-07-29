@@ -8,11 +8,17 @@ import net.minecraft.network.chat.Component;
 
 public class ConfirmDeleteScreen extends BaseModScreen {
    private final Screen parentScreen;
+   private final Component message;
    private final Runnable onConfirm;
 
    public ConfirmDeleteScreen(Screen parentScreen, Runnable onConfirm) {
-      super(Component.translatable("advwp.dialog.delete.title"), 240, 90);
+      this(parentScreen, Component.translatable("advwp.dialog.delete.title"), Component.translatable("advwp.dialog.delete.message"), onConfirm);
+   }
+
+   public ConfirmDeleteScreen(Screen parentScreen, Component title, Component message, Runnable onConfirm) {
+      super(title, 240, 90);
       this.parentScreen = parentScreen;
+      this.message = message;
       this.onConfirm = onConfirm;
    }
 
@@ -25,7 +31,7 @@ public class ConfirmDeleteScreen extends BaseModScreen {
 
    public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float d) {
       super.extractRenderState(g, mx, my, d);
-      String msg1 = Component.translatable("advwp.dialog.delete.message").getString();
+      String msg1 = this.message.getString();
       int tx1 = this.panelX + (this.panelWidth - this.font.width(msg1)) / 2;
       g.text(this.font, msg1, tx1, this.panelY + 28, -12303292, false);
    }

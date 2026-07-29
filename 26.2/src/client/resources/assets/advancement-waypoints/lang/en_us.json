@@ -50,9 +50,9 @@
 
   "advwp.parent.none": "none",
 
+  "key.category.advancement-waypoints.key_category": "Advancement Waypoints",
   "advwp.key.category": "Advancement Waypoints",
-  "advwp.key.open_menu": "Open menu",
-  "advwp.key.clear_nav": "Clear navigator",
+  "advwp.key.clear_nav": "Disable navigation",
 
   "advwp.context.navigate": "§aNavigate",
   "advwp.context.teleport": "§aTeleport",
@@ -74,7 +74,12 @@
   "advwp.dialog.delete.message": "Are you sure you want to delete this waypoint?",
   "advwp.dialog.delete.confirm": "§cDelete",
 
+  "advwp.dialog.delete_tab.title": "§8Delete Tab",
+  "advwp.dialog.delete_tab.message": "Are you sure you want to delete this tab?",
+
   "advwp.context.create_tab": "Create tab",
+  "advwp.context.hide_tab": "Hide tab",
+  "advwp.context.delete_tab": "Delete tab",
   "advwp.screen.create_tab": "Create tab",
   "advwp.context.hide_branch": "§6Hide branch",
   "advwp.context.show_branch": "§aShow branch",

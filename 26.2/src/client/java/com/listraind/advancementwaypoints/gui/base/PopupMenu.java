@@ -84,10 +84,17 @@ public class PopupMenu {
             }
          }
 
+         int squareCount = this.squareItems.size();
+         if (squareCount > 0) {
+            int reqWidth = squareCount * 18 + (squareCount - 1) * 8 + 6;
+            if (reqWidth > minWidth) {
+               minWidth = reqWidth;
+            }
+         }
+
          this.menuWidth = minWidth;
          int innerWidth = this.menuWidth - 6;
          int textRows = this.textItems.size();
-         int squareCount = this.squareItems.size();
          int heightCalc = 3;
          if (textRows > 0) {
             heightCalc += textRows * 16 + (textRows - 1) * 4;
@@ -98,7 +105,7 @@ public class PopupMenu {
                heightCalc += 4;
             }
 
-            int squareSize = (innerWidth - (squareCount - 1) * 8) / squareCount;
+            int squareSize = 18;
             heightCalc += squareSize;
          }
 
@@ -144,11 +151,13 @@ public class PopupMenu {
          }
 
          if (squareCount > 0) {
-            int squareSize = (innerWidth - (squareCount - 1) * 8) / squareCount;
+            int squareSize = 18;
+            int totalSquareWidth = squareCount * squareSize + (squareCount - 1) * 8;
+            int startX = this.x + 3 + (innerWidth - totalSquareWidth) / 2;
 
             for(int i = 0; i < squareCount; ++i) {
                SquareItem item = (SquareItem)this.squareItems.get(i);
-               int bx = this.x + 3 + i * (squareSize + 8);
+               int bx = startX + i * (squareSize + 8);
                Button.Builder builder = Button.builder(Component.literal(""), (b) -> {
                }).bounds(bx, currentY, squareSize, squareSize);
                if (item.tooltip != null) {

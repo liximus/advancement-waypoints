@@ -38,19 +38,13 @@ def modmenuStubDir = layout.buildDirectory.dir("generated/sources/modmenuStubs/j
 def modmenuStubClassesDir = layout.buildDirectory.dir("generated/sources/modmenuStubs/classes").get().asFile
 
 dependencies {
-	// Скачивание клиента/сервера Minecraft
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-	// В 26.2 нет маппингов — строка mappings полностью удалена!
-
-	// Для необфусцированных версий 26.x используются обычные implementation / compileOnly
-	// вместо modImplementation / modCompileOnly
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	implementation "dev.isxander:yet-another-config-lib:3.9.6+26.2-fabric"
 
-	// Локальные зависимости из папки libs
 	compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 	clientCompileOnly files(modmenuStubClassesDir)
 }
@@ -99,15 +93,12 @@ processResources {
 	}
 }
 
-// Настройка Java 25
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
 }
 
 java {
 	withSourcesJar()
-
-	// Синхронизируем целевую версию Java до 25
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25
 }
@@ -136,7 +127,7 @@ publishing {
 		}
 	}
 	repositories {
-		// Репозитории для публикации мода
+
 	}
 }
 
