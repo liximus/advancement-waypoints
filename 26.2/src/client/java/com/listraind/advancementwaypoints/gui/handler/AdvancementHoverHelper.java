@@ -48,7 +48,9 @@ public class AdvancementHoverHelper {
         int relY = (int) my - contentTop;
 
         if (!IS_PLANE_MOD) {
-            if (relX < 0 || relX >= 234 || relY < 0 || relY >= 113) {
+            int maxRelX = Math.max(234, screenWidth - 2 * contentLeft);
+            int maxRelY = Math.max(113, screenHeight - 2 * contentTop + 9);
+            if (relX < 0 || relX >= maxRelX || relY < 0 || relY >= maxRelY) {
                 return null;
             }
         } else {

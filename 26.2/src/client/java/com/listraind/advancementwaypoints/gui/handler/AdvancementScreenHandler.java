@@ -190,7 +190,8 @@ public class AdvancementScreenHandler {
                 }
             }
         }
-        return mx >= panelLeft && mx <= panelLeft + AdvancementsScreen.WINDOW_WIDTH
+        int panelRight = (captX != 0 || captY != 0) ? screen.width - panelLeft : panelLeft + AdvancementsScreen.WINDOW_WIDTH;
+        return mx >= panelLeft && mx <= panelRight
                 && my >= panelTop - 32 && my <= panelTop + 20;
     }
 
