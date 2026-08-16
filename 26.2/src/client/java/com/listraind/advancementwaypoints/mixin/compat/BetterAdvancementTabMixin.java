@@ -48,6 +48,18 @@ public abstract class BetterAdvancementTabMixin implements IBetterAdvancementTab
         }
     }
 
+    @org.spongepowered.asm.mixin.injection.Redirect(
+            method = "drawContents",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blit(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIFFIIII)V"
+            ),
+            remap = true
+    )
+    private void advWp_redirectBetterTabBackgroundBlit(GuiGraphicsExtractor g, com.mojang.blaze3d.pipeline.RenderPipeline pipeline, net.minecraft.resources.Identifier texture, int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight) {
+        com.listraind.advancementwaypoints.advancement.TextureHelper.blitBackground(g, pipeline, texture, x, y, width, height);
+    }
+
     @Inject(
             method = "addWidget",
             at = @At("RETURN")

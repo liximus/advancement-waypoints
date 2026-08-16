@@ -135,12 +135,14 @@ public class NavigatorHud {
       }
 
       net.minecraft.client.gui.screens.Screen currentScreen = mc.gui.screen();
-      boolean isScreenOpen = currentScreen != null && !(currentScreen instanceof net.minecraft.client.gui.screens.PauseScreen);
+      boolean isScreenOpen = currentScreen != null
+            && !(currentScreen instanceof net.minecraft.client.gui.screens.PauseScreen)
+            && !(currentScreen instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen);
       float dimFactor = isScreenOpen ? 0.25F : 1.0F;
       int iconAlpha = (int)(255 * alpha);
       int rgb = (int)(255 * dimFactor);
       int iconColor = (iconAlpha << 24) | (rgb << 16) | (rgb << 8) | rgb;
-      int boxColor = isScreenOpen ? 0xD0000000 : Integer.MIN_VALUE;
+      int boxColor = Integer.MIN_VALUE;
       int textColor = isScreenOpen ? 0xFF505050 : -1;
 
       g.pose().pushMatrix();
@@ -214,12 +216,14 @@ public class NavigatorHud {
       }
 
       net.minecraft.client.gui.screens.Screen currentScreen = mc.gui.screen();
-      boolean isScreenOpen = currentScreen != null && !(currentScreen instanceof net.minecraft.client.gui.screens.PauseScreen);
+      boolean isScreenOpen = currentScreen != null
+            && !(currentScreen instanceof net.minecraft.client.gui.screens.PauseScreen)
+            && !(currentScreen instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen);
       float dimFactor = isScreenOpen ? 0.25F : 1.0F;
       int iconAlpha = (int)(255 * alpha);
       int rgb = (int)(255 * dimFactor);
       int iconColor = (iconAlpha << 24) | (rgb << 16) | (rgb << 8) | rgb;
-      int boxColor = isScreenOpen ? 0xD0000000 : Integer.MIN_VALUE;
+      int boxColor = Integer.MIN_VALUE;
       int textColor = isScreenOpen ? 0xFF505050 : -1;
 
       g.pose().pushMatrix();
@@ -285,11 +289,13 @@ public class NavigatorHud {
       }
 
       net.minecraft.client.gui.screens.Screen currentScreen = mc.gui.screen();
-      boolean isScreenOpen = currentScreen != null && !(currentScreen instanceof net.minecraft.client.gui.screens.PauseScreen);
+      boolean isScreenOpen = currentScreen != null
+            && !(currentScreen instanceof net.minecraft.client.gui.screens.PauseScreen)
+            && !(currentScreen instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen);
       float dimFactor = isScreenOpen ? 0.25F : 1.0F;
       int rgb = (int)(255 * dimFactor);
       int portalColor = (255 << 24) | (rgb << 16) | (rgb << 8) | rgb;
-      int boxColor = isScreenOpen ? 0xD0000000 : Integer.MIN_VALUE;
+      int boxColor = Integer.MIN_VALUE;
 
       g.pose().pushMatrix();
       g.pose().translate((float)cx, (float)cy);

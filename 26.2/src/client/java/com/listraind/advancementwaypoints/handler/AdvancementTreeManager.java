@@ -103,8 +103,7 @@ public class AdvancementTreeManager {
         List<AdvancementHolder> holders = new ArrayList<>();
         for (WaypointData w : result.advancements()) {
             Identifier id = w.resourceLocation();
-            Optional<Identifier> bg = w.background() != null && !w.background().isEmpty()
-                    ? Optional.of(Identifier.parse(w.background())) : Optional.empty();
+            Optional<ClientAsset.ResourceTexture> bg = com.listraind.advancementwaypoints.advancement.TextureHelper.parseBackground(w.background());
 
             ItemStack stack = w.itemStack();
             if (stack == null || stack.isEmpty()) {
@@ -113,7 +112,7 @@ public class AdvancementTreeManager {
 
             DisplayInfo display = new DisplayInfo(
                     ItemStackTemplate.fromStack(stack), Component.literal(w.title()), Component.literal(w.description()),
-                    bg.map(ClientAsset.ResourceTexture::new), w.frameType(), true, true, false
+                    bg, w.frameType(), true, true, false
             );
             display.setLocation(w.x(), w.y());
 

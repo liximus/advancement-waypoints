@@ -235,7 +235,7 @@ public class AdvancementScreenHandler {
                 }
                 startNavigation(id, targets);
             }
-            default -> { // NAVIGATE
+            default -> {
                 if (WaypointStorage.isBranchHidden(id.toString())) {
                     WaypointStorage.setBranchHidden(id.toString(), false);
                 }

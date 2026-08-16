@@ -26,6 +26,11 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.phys.shapes.Shapes;
 
 public class ItemPickerScreen extends BaseModScreen {
+   @FunctionalInterface
+   public interface ItemSelectionHandler {
+      void handle(ItemPickerScreen picker, Item item);
+   }
+
    private static final Identifier SLOTS_LIGHT = Identifier.fromNamespaceAndPath("advancement-waypoints", "textures/slots.png");
    private static final Identifier SLOTS_DARK = Identifier.fromNamespaceAndPath("advancement-waypoints", "textures/slotsdark.png");
    private static final Identifier SCROLLER = Identifier.withDefaultNamespace("container/creative_inventory/scroller");
@@ -34,7 +39,7 @@ public class ItemPickerScreen extends BaseModScreen {
    private static final int SCROLLBAR_HANDLE_HEIGHT = 15;
    private static final Set<String> FUNCTIONAL_BLOCK_IDS = Set.of("crafting_table", "smithing_table", "cartography_table", "fletching_table", "tnt", "note_block", "observer", "piston", "sticky_piston", "target", "redstone_lamp", "redstone_block");
    private final Screen parent;
-   private final Consumer<Item> callback;
+   private final ItemSelectionHandler handler;
    private final boolean backgroundsOnly;
    private final List<Item> allItems;
    private List<Item> filtered;
@@ -45,10 +50,20 @@ public class ItemPickerScreen extends BaseModScreen {
    private boolean dragging;
 
    public ItemPickerScreen(Screen parent, Consumer<Item> callback) {
-      this(parent, false, callback);
+      this(parent, false, (picker, item) -> {
+         callback.accept(item);
+         picker.onClose();
+      });
    }
 
    public ItemPickerScreen(Screen parent, boolean backgroundsOnly, Consumer<Item> callback) {
+      this(parent, backgroundsOnly, (picker, item) -> {
+         callback.accept(item);
+         picker.onClose();
+      });
+   }
+
+   public ItemPickerScreen(Screen parent, boolean backgroundsOnly, ItemSelectionHandler handler) {
       super(backgroundsOnly ? Component.translatable("advwp.picker.background.title") : Component.translatable("advwp.picker.icon.title"), 206, 160);
       this.allItems = new ArrayList();
       this.filtered = new ArrayList();
@@ -58,7 +73,7 @@ public class ItemPickerScreen extends BaseModScreen {
       this.dragging = false;
       this.parent = parent;
       this.backgroundsOnly = backgroundsOnly;
-      this.callback = callback;
+      this.handler = handler;
       this.initItems();
    }
 
@@ -70,26 +85,34 @@ public class ItemPickerScreen extends BaseModScreen {
          label59:
          while(true) {
             Item item;
-            while(true) {
-               if (!var1.hasNext()) {
-                  break label59;
+            do {
+               do {
+                  if (!var1.hasNext()) {
+                     break label59;
+                  }
+
+                  item = (Item)var1.next();
+               } while(!(item instanceof BlockItem));
+            } while(item == Items.STONE);
+
+            BlockItem bi = (BlockItem)item;
+            Block block = bi.getBlock();
+            String path = BuiltInRegistries.BLOCK.getKey(block).getPath();
+            if (!FUNCTIONAL_BLOCK_IDS.contains(path)) {
+               if (block instanceof EntityBlock) {
+                  continue;
                }
 
-               item = (Item)var1.next();
-               if (item != Items.STONE && item instanceof BlockItem) {
-                  BlockItem bi = (BlockItem)item;
-                  Block block = bi.getBlock();
-                  if (!(block instanceof EntityBlock)) {
-                     String path = BuiltInRegistries.BLOCK.getKey(block).getPath();
-                     if (!FUNCTIONAL_BLOCK_IDS.contains(path)) {
-                        try {
-                           if (Shapes.block().equals(block.defaultBlockState().getShape((BlockGetter)null, (BlockPos)null)) && block.defaultBlockState().canOcclude()) {
-                              break;
-                           }
-                        } catch (Exception var7) {
-                        }
-                     }
+               if (path.contains("shulker_box") || path.contains("banner") || path.contains("sign") || path.contains("chest") || path.contains("bed") || path.contains("door") || path.contains("fence") || path.contains("gate") || path.contains("wall") || path.contains("slab") || path.contains("stairs") || path.contains("torch") || path.contains("lantern") || path.contains("carpet") || path.contains("candle") || path.contains("pane") || path.contains("head") || path.contains("skull") || path.contains("pot") || path.contains("rail") || path.contains("wire") || path.contains("dust") || path.contains("coral") || path.contains("plant") || path.contains("sapling") || path.contains("leaves") || path.contains("glass") || path.contains("ice") || path.contains("chain") || path.contains("rod") || path.contains("bell") || path.contains("cauldron") || path.contains("anvil") || path.contains("hopper") || path.contains("brewing") || path.contains("conduit") || path.contains("beacon") || path.contains("portal") || path.contains("spawner") || path.contains("egg") || path.contains("cake") || path.contains("bush") || path.contains("flower") || path.contains("crop") || path.contains("stem") || path.contains("vine") || path.contains("scaffolding") || path.contains("pointed_dripstone") || path.contains("froglight") || path.contains("lightning") || path.contains("comparator") || path.contains("repeater") || path.contains("tripwire") || path.contains("daylight") || path.contains("sensor") || path.contains("lever") || path.contains("button") || path.contains("pressure_plate")) {
+                  continue;
+               }
+
+               try {
+                  if (block.defaultBlockState().isAir() || !block.defaultBlockState().canOcclude() || block.defaultBlockState().getCollisionShape((BlockGetter)null, BlockPos.ZERO) != Shapes.block()) {
+                     continue;
                   }
+               } catch (Throwable var7) {
+                  continue;
                }
             }
 
@@ -106,9 +129,17 @@ public class ItemPickerScreen extends BaseModScreen {
 
    protected void initContent() {
       int searchWidth = this.panelWidth - 20;
+      String prevText = this.searchField != null ? this.searchField.getValue() : "";
+      int prevScrollRow = this.scrollRow;
+      float prevScrollProgress = this.scrollProgress;
       this.searchField = (EditBox)this.addRenderableWidget(new EditBox(this.font, this.panelX + (this.panelWidth - searchWidth) / 2, this.panelY + 18, searchWidth, 16, Component.literal("")));
       this.searchField.setHint(Component.translatable(this.backgroundsOnly ? "advwp.hint.search.background" : "advwp.hint.search.item"));
       this.searchField.setResponder(this::onSearchChanged);
+      if (!prevText.isEmpty()) {
+         this.searchField.setValue(prevText);
+         this.scrollRow = prevScrollRow;
+         this.scrollProgress = prevScrollProgress;
+      }
    }
 
    private void onSearchChanged(String text) {
@@ -211,11 +242,10 @@ public class ItemPickerScreen extends BaseModScreen {
 
                int x = this.gridLeft() + col * 18;
                int y = this.gridTop() + row * 18;
-               if (mx >= (double)x && mx < (double)(x + 18) && my >= (double)y && my < (double)(y + 18)) {
-                  this.callback.accept((Item)this.filtered.get(idx));
-                  this.onClose();
-                  return true;
-               }
+                if (mx >= (double)x && mx < (double)(x + 18) && my >= (double)y && my < (double)(y + 18)) {
+                   this.handler.handle(this, (Item)this.filtered.get(idx));
+                   return true;
+                }
             }
          }
 

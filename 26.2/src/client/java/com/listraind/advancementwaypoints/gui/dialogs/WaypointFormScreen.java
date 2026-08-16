@@ -196,9 +196,12 @@ public abstract class WaypointFormScreen extends BaseModScreen {
 
       y += 22;
       int buttonWidth = this.panelWidth - 40 - 25;
-      this.iconButton = (Button)this.addRenderableWidget(Button.builder(Component.translatable("advwp.field.icon", new Object[]{this.iconId()}), (b) -> {
+      this.iconButton = (Button)this.addRenderableWidget(Button.builder(Component.translatable("advwp.field.icon", new Object[]{this.getIconDisplayName()}), (b) -> {
          this.setFocused((GuiEventListener)null);
-         this.minecraft.gui.setScreen(new ItemPickerScreen(this, (item) -> this.selectedIcon = item));
+         this.minecraft.gui.setScreen(new ItemPickerScreen(this, (item) -> {
+            this.selectedIcon = item;
+            this.iconButton.setMessage(Component.translatable("advwp.field.icon", new Object[]{this.getIconDisplayName()}));
+         }));
       }).bounds(fieldLeft, y, buttonWidth, 18).build());
       this.iconButton.active = !this.isVanilla;
       y += 22;
@@ -265,16 +268,22 @@ public abstract class WaypointFormScreen extends BaseModScreen {
    }
 
    private int initBackgroundField(int fieldLeft, int y) {
-      Component backgroundLabel = this.savedBackground != null && !this.savedBackground.isEmpty() ? Component.literal(this.shortBgName(this.savedBackground)) : Component.translatable("advwp.field.background.default");
+      Component backgroundLabel = getBackgroundDisplayName(this.savedBackground);
       this.bgButton = (Button)this.addRenderableWidget(Button.builder(Component.translatable("advwp.field.background", new Object[]{backgroundLabel}), (b) -> {
          this.setFocused((GuiEventListener)null);
-         this.minecraft.gui.setScreen(new ItemPickerScreen(this, true, (item) -> {
-            Identifier blockId = BuiltInRegistries.ITEM.getKey(item);
-            if (blockId != null) {
-               String var10001 = blockId.getNamespace();
-               this.savedBackground = var10001 + ":block/" + blockId.getPath();
+         this.minecraft.gui.setScreen(new ItemPickerScreen(this, true, (picker, item) -> {
+            List<com.listraind.advancementwaypoints.advancement.TextureHelper.BlockFace> faces = com.listraind.advancementwaypoints.advancement.TextureHelper.getBlockFaces(item);
+            if (faces.size() > 1) {
+               this.minecraft.gui.setScreen(new BlockFacePickerScreen(picker, this, item, faces, (faceId) -> {
+                  this.savedBackground = faceId.toString();
+                  this.bgButton.setMessage(Component.translatable("advwp.field.background", new Object[]{getBackgroundDisplayName(this.savedBackground)}));
+               }));
+            } else {
+               Identifier textureId = faces.isEmpty() ? com.listraind.advancementwaypoints.advancement.TextureHelper.resolveBlockTexture(item) : faces.get(0).textureId();
+               this.savedBackground = textureId.toString();
+               this.bgButton.setMessage(Component.translatable("advwp.field.background", new Object[]{getBackgroundDisplayName(this.savedBackground)}));
+               this.minecraft.gui.setScreen(this);
             }
-
          }));
       }).bounds(fieldLeft, y, this.panelWidth - 40, 18).build());
       this.bgButton.active = !this.isVanilla;
@@ -391,13 +400,12 @@ public abstract class WaypointFormScreen extends BaseModScreen {
       }
 
       if (this.iconButton != null) {
-         this.iconButton.setMessage(Component.translatable("advwp.field.icon", new Object[]{this.iconId()}));
+         this.iconButton.setMessage(Component.translatable("advwp.field.icon", new Object[]{this.getIconDisplayName()}));
          graphics.item(new ItemStack(this.selectedIcon), this.iconButton.getX() + this.iconButton.getWidth() + 7, this.iconButton.getY() + 1);
       }
 
       if (this.bgButton != null) {
-         Component backgroundLabel = this.savedBackground != null && !this.savedBackground.isEmpty() ? Component.literal(this.shortBgName(this.savedBackground)) : Component.translatable("advwp.field.background.default");
-         this.bgButton.setMessage(Component.translatable("advwp.field.background", new Object[]{backgroundLabel}));
+         this.bgButton.setMessage(Component.translatable("advwp.field.background", new Object[]{getBackgroundDisplayName(this.savedBackground)}));
       }
 
       if (this.separator1Y != 0) {
@@ -524,8 +532,7 @@ public abstract class WaypointFormScreen extends BaseModScreen {
       if (this.savedBackground != null && !this.savedBackground.isEmpty()) {
          return this.savedBackground;
       } else {
-         String var10000 = BuiltInRegistries.ITEM.getKey(Items.STONE).getNamespace();
-         return var10000 + ":block/" + BuiltInRegistries.ITEM.getKey(Items.STONE).getPath();
+         return com.listraind.advancementwaypoints.advancement.TextureHelper.resolveBlockTexture(Items.STONE).toString();
       }
    }
 
@@ -579,17 +586,54 @@ public abstract class WaypointFormScreen extends BaseModScreen {
 
    }
 
-   private String shortBgName(String fullPath) {
-      if (fullPath == null) {
-         return "?";
-      } else {
-         int lastSlash = fullPath.lastIndexOf(47);
-         String name = lastSlash >= 0 ? fullPath.substring(lastSlash + 1) : fullPath;
-         if (name.endsWith(".png")) {
-            name = name.substring(0, name.length() - 4);
+   private Component getIconDisplayName() {
+      if (this.selectedIcon != null && this.selectedIcon != Items.AIR) {
+         return (new ItemStack(this.selectedIcon)).getHoverName();
+      }
+      return Component.literal(this.iconId());
+   }
+
+   public static Component getBackgroundDisplayName(String bgStr) {
+      if (bgStr == null || bgStr.isEmpty() || bgStr.equals(com.listraind.advancementwaypoints.advancement.TextureHelper.DEFAULT_BG)) {
+         return Component.translatable("advwp.field.background.default");
+      }
+
+      try {
+         Identifier rawId = Identifier.parse(bgStr);
+         Identifier cleanId = com.listraind.advancementwaypoints.advancement.TextureHelper.toCleanAssetId(rawId);
+         String path = cleanId.getPath();
+         if (path.startsWith("block/")) {
+            path = path.substring(6);
          }
 
-         return name;
+         String ns = cleanId.getNamespace();
+         var itemOpt = BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath(ns, path));
+         String baseBlock = path;
+         String foundSuffix = null;
+         if (itemOpt.isEmpty()) {
+            for (String suffix : new String[]{"_top", "_side", "_front", "_bottom", "_end", "_back", "_inside", "_lines", "_chiseled"}) {
+               if (path.endsWith(suffix)) {
+                  baseBlock = path.substring(0, path.length() - suffix.length());
+                  foundSuffix = suffix;
+                  itemOpt = BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath(ns, baseBlock));
+                  break;
+               }
+            }
+         }
+
+         if (itemOpt.isPresent()) {
+            Item item = itemOpt.get().value();
+            Component blockName = (new ItemStack(item)).getHoverName();
+            if (foundSuffix != null) {
+               Component faceName = com.listraind.advancementwaypoints.advancement.TextureHelper.getFaceName(cleanId);
+               return Component.literal(blockName.getString() + " (" + faceName.getString() + ")");
+            }
+            return blockName;
+         }
+
+         return Component.literal(cleanId.getPath());
+      } catch (Exception e) {
+         return Component.translatable("advwp.field.background.default");
       }
    }
 

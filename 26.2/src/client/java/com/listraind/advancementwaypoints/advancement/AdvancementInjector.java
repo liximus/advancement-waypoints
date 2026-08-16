@@ -59,7 +59,7 @@ public class AdvancementInjector {
 
             boolean isRoot = parent == null || parent.isEmpty();
             if (isRoot && (bg == null || bg.isEmpty())) {
-               bg = "minecraft:torch";
+               bg = TextureHelper.DEFAULT_BG;
             }
 
             String frame = parseStringProperty(display, "frame");

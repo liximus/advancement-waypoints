@@ -24,7 +24,7 @@
   "advwp.field.parent.select": "§eвыберите...",
   "advwp.field.parent.reset": "X",
   "advwp.field.background": "Фон: %s",
-  "advwp.field.background.default": "stone (по умолч., не выбран)",
+  "advwp.field.background.default": "Камень (по умолч., не выбран)",
 
   "advwp.frame.task": "Обычное",
   "advwp.frame.goal": "Цель",
@@ -41,7 +41,19 @@
 
   "advwp.picker.icon.title": "§8Выбор иконки",
   "advwp.picker.background.title": "§8Выбор фона",
+  "advwp.picker.face.title": "§8Выбор стороны",
   "advwp.picker.dimension.title": "§8Выберите измерение",
+
+  "advwp.face.top": "Верх",
+  "advwp.face.bottom": "Низ",
+  "advwp.face.side": "Бок",
+  "advwp.face.front": "Перед",
+  "advwp.face.back": "Зад",
+  "advwp.face.end": "Торцевая",
+  "advwp.face.inside": "Внутри",
+  "advwp.face.lines": "Линии",
+  "advwp.face.chiseled": "Резной",
+  "advwp.face.main": "Основная",
 
   "advwp.dim.overworld": "§2Верхний мир",
   "advwp.dim.nether_roof": "§4Крыша ада",
