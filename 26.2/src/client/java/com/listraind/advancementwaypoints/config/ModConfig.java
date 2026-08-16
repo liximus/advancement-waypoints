@@ -34,11 +34,31 @@ public class ModConfig {
       BOTTOM_RIGHT("advwp.config.hud_position.bottom_right"),
       TOP_RIGHT("advwp.config.hud_position.top_right"),
       TOP_LEFT("advwp.config.hud_position.top_left"),
-      BOTTOM_LEFT("advwp.config.hud_position.bottom_left");
+      BOTTOM_LEFT("advwp.config.hud_position.bottom_left"),
+      HOTBAR_LEFT("advwp.config.hud_position.hotbar_left"),
+      HOTBAR_RIGHT("advwp.config.hud_position.hotbar_right");
 
       private final String translationKey;
 
       HudPosition(String translationKey) {
+         this.translationKey = translationKey;
+      }
+
+      @Override
+      public net.minecraft.network.chat.Component getDisplayName() {
+         return net.minecraft.network.chat.Component.translatable(this.translationKey);
+      }
+   }
+
+   public enum LeftClickAction implements dev.isxander.yacl3.api.NameableEnum {
+      NAVIGATE("advwp.config.click_action.navigate"),
+      TELEPORT("advwp.config.click_action.teleport"),
+      TELEPORT_IF_POSSIBLE("advwp.config.click_action.teleport_if_possible"),
+      TOGGLE_BRANCH("advwp.config.click_action.toggle_branch");
+
+      private final String translationKey;
+
+      LeftClickAction(String translationKey) {
          this.translationKey = translationKey;
       }
 
@@ -76,9 +96,12 @@ public class ModConfig {
    private static final ModConfig INSTANCE = new ModConfig();
    private boolean enableChatScanner = true;
    private boolean enableNavigation = true;
+   private LeftClickAction leftClickAction = LeftClickAction.NAVIGATE;
    private boolean allowAttachToAnyNode = false;
    private HudMode hudMode = HudMode.COMPASS;
    private HudPosition hudPosition = HudPosition.BOTTOM_RIGHT;
+   private int hudScale = 100;
+   private int hudOffset = 10;
    private boolean showDistanceOnLocator = true;
    private boolean showItemOnLocator = true;
    private int autoDisableRadius = 32;
@@ -110,6 +133,14 @@ public class ModConfig {
       this.enableNavigation = enableNavigation;
    }
 
+   public LeftClickAction getLeftClickAction() {
+      return this.leftClickAction;
+   }
+
+   public void setLeftClickAction(LeftClickAction leftClickAction) {
+      this.leftClickAction = leftClickAction != null ? leftClickAction : LeftClickAction.NAVIGATE;
+   }
+
    public boolean isAllowAttachToAnyNode() {
       return this.allowAttachToAnyNode;
    }
@@ -132,6 +163,26 @@ public class ModConfig {
 
    public void setHudPosition(HudPosition hudPosition) {
       this.hudPosition = hudPosition != null ? hudPosition : HudPosition.BOTTOM_RIGHT;
+   }
+
+   public int getHudScale() {
+      return this.hudScale;
+   }
+
+   public void setHudScale(int hudScale) {
+      this.hudScale = Math.max(25, Math.min(300, hudScale));
+   }
+
+   public float getHudScaleFactor() {
+      return this.hudScale / 100.0F;
+   }
+
+   public int getHudOffset() {
+      return this.hudOffset;
+   }
+
+   public void setHudOffset(int hudOffset) {
+      this.hudOffset = Math.max(0, hudOffset);
    }
 
    public boolean isShowDistanceOnLocator() {
@@ -193,6 +244,12 @@ public class ModConfig {
             if (obj.has("enableNavigation")) {
                this.enableNavigation = obj.get("enableNavigation").getAsBoolean();
             }
+            if (obj.has("leftClickAction")) {
+               try {
+                  this.leftClickAction = LeftClickAction.valueOf(obj.get("leftClickAction").getAsString());
+               } catch (Exception ignored) {
+               }
+            }
             if (obj.has("allowAttachToAnyNode")) {
                this.allowAttachToAnyNode = obj.get("allowAttachToAnyNode").getAsBoolean();
             }
@@ -207,6 +264,12 @@ public class ModConfig {
                   this.hudPosition = HudPosition.valueOf(obj.get("hudPosition").getAsString());
                } catch (Exception ignored) {
                }
+            }
+            if (obj.has("hudScale")) {
+               this.hudScale = obj.get("hudScale").getAsInt();
+            }
+            if (obj.has("hudOffset")) {
+               this.hudOffset = obj.get("hudOffset").getAsInt();
             }
             if (obj.has("showDistanceOnLocator")) {
                this.showDistanceOnLocator = obj.get("showDistanceOnLocator").getAsBoolean();
@@ -246,9 +309,12 @@ public class ModConfig {
          JsonObject obj = new JsonObject();
          obj.addProperty("enableChatScanner", this.enableChatScanner);
          obj.addProperty("enableNavigation", this.enableNavigation);
+         obj.addProperty("leftClickAction", this.leftClickAction.name());
          obj.addProperty("allowAttachToAnyNode", this.allowAttachToAnyNode);
          obj.addProperty("hudMode", this.hudMode.name());
          obj.addProperty("hudPosition", this.hudPosition.name());
+         obj.addProperty("hudScale", this.hudScale);
+         obj.addProperty("hudOffset", this.hudOffset);
          obj.addProperty("showDistanceOnLocator", this.showDistanceOnLocator);
          obj.addProperty("showItemOnLocator", this.showItemOnLocator);
          obj.addProperty("autoDisableRadius", this.autoDisableRadius);

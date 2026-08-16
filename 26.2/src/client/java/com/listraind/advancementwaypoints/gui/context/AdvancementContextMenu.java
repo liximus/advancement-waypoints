@@ -17,6 +17,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -99,10 +101,21 @@ public class AdvancementContextMenu {
     }
 
     public void showTabMenu(int mouseX, int mouseY) {
-        showTabMenu(mouseX, mouseY, null);
+        showTabMenu(mouseX, mouseY, (String) null);
     }
 
     public void showTabMenu(int mouseX, int mouseY, net.minecraft.client.gui.screens.advancements.AdvancementTab tab) {
+        String rootId = null;
+        if (tab != null) {
+            net.minecraft.advancements.AdvancementNode rootNode = ((com.listraind.advancementwaypoints.mixin.client.AdvancementTabAccessor) tab).getRootNode();
+            if (rootNode != null) {
+                rootId = rootNode.holder().id().toString();
+            }
+        }
+        showTabMenu(mouseX, mouseY, rootId);
+    }
+
+    public void showTabMenu(int mouseX, int mouseY, @Nullable String rootId) {
         this.advancementId = null;
         this.targets = null;
         if (targetSelectionMenu != null) targetSelectionMenu.hide();
@@ -116,19 +129,10 @@ public class AdvancementContextMenu {
             minecraft.gui.setScreen(screen);
         });
 
-        boolean isCustom = false;
-        String rootId = null;
-        if (tab != null) {
-            net.minecraft.advancements.AdvancementNode rootNode = ((com.listraind.advancementwaypoints.mixin.client.AdvancementTabAccessor) tab).getRootNode();
-            if (rootNode != null) {
-                rootId = rootNode.holder().id().toString();
-                isCustom = rootId.startsWith("advwaypoints:");
-            }
-        }
-
+        boolean isCustom = (rootId != null && rootId.startsWith("advwaypoints:"));
         final String finalRootId = rootId;
         final boolean finalIsCustom = isCustom;
-        final boolean hasTab = (tab != null && finalRootId != null);
+        final boolean hasTab = (finalRootId != null);
 
         menu.addSquareButton(CREATE_ICON, Component.translatable("advwp.context.create_tab"), () -> {
             CreateWaypointScreen screen = new CreateWaypointScreen(true);
@@ -147,15 +151,33 @@ public class AdvancementContextMenu {
 
         menu.addSquareButton(DELETE_ICON, Component.translatable("advwp.context.sq_del"), () -> {
             if (finalRootId != null) {
-                minecraft.gui.setScreen(new ConfirmDeleteScreen(
-                        new AdvancementsScreen(minecraft.player.connection.getAdvancements(), lastScreen),
-                        Component.translatable("advwp.dialog.delete_tab.title"),
-                        Component.translatable("advwp.dialog.delete_tab.message"),
-                        () -> {
-                            WaypointStorage.deleteWaypoint(finalRootId);
-                            reopenAdvancementsScreen(minecraft);
-                        }
-                ));
+                Screen nextScreen = new AdvancementsScreen(minecraft.player.connection.getAdvancements(), lastScreen);
+                boolean hasChildren = WaypointStorage.hasChildren(Identifier.parse(finalRootId));
+                if (hasChildren) {
+                    minecraft.gui.setScreen(new ConfirmDeleteScreen(
+                            nextScreen,
+                            Component.translatable("advwp.dialog.delete_tab.title"),
+                            Component.translatable("advwp.dialog.delete_tab.message"),
+                            () -> {
+                                WaypointStorage.deleteWaypoint(finalRootId);
+                                reopenAdvancementsScreen(minecraft);
+                            },
+                            () -> {
+                                WaypointStorage.deleteWaypointWithChildren(finalRootId);
+                                reopenAdvancementsScreen(minecraft);
+                            }
+                    ));
+                } else {
+                    minecraft.gui.setScreen(new ConfirmDeleteScreen(
+                            nextScreen,
+                            Component.translatable("advwp.dialog.delete_tab.title"),
+                            Component.translatable("advwp.dialog.delete_tab.message"),
+                            () -> {
+                                WaypointStorage.deleteWaypoint(finalRootId);
+                                reopenAdvancementsScreen(minecraft);
+                            }
+                    ));
+                }
             }
         }, hasTab && finalIsCustom);
 
@@ -261,13 +283,29 @@ public class AdvancementContextMenu {
                 minecraft.gui.setScreen(screen);
             }
             case 3 -> {
-                minecraft.gui.setScreen(new ConfirmDeleteScreen(
-                        new AdvancementsScreen(minecraft.player.connection.getAdvancements(), lastScreen),
-                        () -> {
-                            WaypointStorage.deleteWaypoint(advancementId.toString());
-                            reopenAdvancementsScreen(minecraft);
-                        }
-                ));
+                Screen nextScreen = new AdvancementsScreen(minecraft.player.connection.getAdvancements(), lastScreen);
+                boolean hasChildren = WaypointStorage.hasChildren(advancementId);
+                if (hasChildren) {
+                    minecraft.gui.setScreen(new ConfirmDeleteScreen(
+                            nextScreen,
+                            () -> {
+                                WaypointStorage.deleteWaypoint(advancementId.toString());
+                                reopenAdvancementsScreen(minecraft);
+                            },
+                            () -> {
+                                WaypointStorage.deleteWaypointWithChildren(advancementId.toString());
+                                reopenAdvancementsScreen(minecraft);
+                            }
+                    ));
+                } else {
+                    minecraft.gui.setScreen(new ConfirmDeleteScreen(
+                            nextScreen,
+                            () -> {
+                                WaypointStorage.deleteWaypoint(advancementId.toString());
+                                reopenAdvancementsScreen(minecraft);
+                            }
+                    ));
+                }
             }
         }
     }

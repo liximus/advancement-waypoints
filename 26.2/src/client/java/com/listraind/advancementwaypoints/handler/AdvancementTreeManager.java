@@ -26,7 +26,7 @@ public class AdvancementTreeManager {
 
     private final AdvancementTree tree;
     private final Map<AdvancementHolder, AdvancementProgress> progress;
-    private final ClientAdvancements.Listener listener;
+    private ClientAdvancements.Listener listener;
 
     private final Set<Identifier> injected = new HashSet<>();
     private final Map<Identifier, float[]> vanillaOriginals = new HashMap<>();
@@ -37,8 +37,12 @@ public class AdvancementTreeManager {
         this.listener = listener;
     }
 
-    public boolean isCompatible(AdvancementTree tree, Map<AdvancementHolder, AdvancementProgress> progress, ClientAdvancements.Listener listener) {
-        return this.tree == tree && this.progress == progress && this.listener == listener;
+    public void setListener(ClientAdvancements.Listener listener) {
+        this.listener = listener;
+    }
+
+    public boolean isCompatible(AdvancementTree tree, Map<AdvancementHolder, AdvancementProgress> progress) {
+        return this.tree == tree && this.progress == progress;
     }
 
     public void inject() {
@@ -62,16 +66,24 @@ public class AdvancementTreeManager {
     }
 
     private void clearInjected() {
-        if (!injected.isEmpty()) {
-            Set<Identifier> present = new HashSet<>();
-            for (Identifier id : injected) {
+        Set<Identifier> customIds = new HashSet<>(injected);
+        for (AdvancementNode n : tree.nodes()) {
+            if ("advwaypoints".equals(n.holder().id().getNamespace())) {
+                customIds.add(n.holder().id());
+            }
+        }
+
+        if (!customIds.isEmpty()) {
+            for (Identifier id : customIds) {
                 AdvancementNode n = tree.get(id);
                 if (n != null) {
                     progress.remove(n.holder());
-                    present.add(id);
+                    if (n.parent() != null && n.parent().children() instanceof Collection<?> col) {
+                        col.remove(n);
+                    }
                 }
             }
-            if (!present.isEmpty()) tree.remove(present);
+            tree.remove(customIds);
             injected.clear();
         }
 

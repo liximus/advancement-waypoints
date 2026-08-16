@@ -1,26 +1,24 @@
 package com.listraind.advancementwaypoints.mixin.compat;
 
 import betteradvancements.common.gui.BetterAdvancementTab;
-import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.advancement.CoordParser;
 import com.listraind.advancementwaypoints.api.IAdvancementScreenCustom;
 import com.listraind.advancementwaypoints.compat.BetterAdvancementsHelper;
 import com.listraind.advancementwaypoints.compat.IBetterAdvancementTab;
 import com.listraind.advancementwaypoints.compat.IBetterAdvancementsScreen;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
-import com.listraind.advancementwaypoints.gui.dialogs.MainMenuScreen;
 import com.listraind.advancementwaypoints.gui.handler.AdvancementScreenHandler;
 import com.listraind.advancementwaypoints.navigator.Navigator;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -37,10 +35,10 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
     @Shadow(remap = false) protected static float zoom;
     @Shadow(remap = false) private int internalWidth;
     @Shadow(remap = false) private int internalHeight;
+    @Shadow(remap = false) private static int tabPage;
     @Shadow(remap = false) private Map<AdvancementHolder, BetterAdvancementTab> tabs;
 
     @Unique private final AdvancementScreenHandler advWp_delegate = new AdvancementScreenHandler();
-    @Unique protected Button modButton;
     @Unique private AdvancementScreenHandler.ButtonState advWp_press = AdvancementScreenHandler.ButtonState.NONE;
 
     protected BetterAdvancementsScreenMixin(Component component) { super(component); }
@@ -52,28 +50,17 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
 
     @Inject(method = "init", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
-        modButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
-                    setFocused(null);
-                    minecraft.gui.setScreen(new MainMenuScreen(this));
-                }).bounds(0, 0, 26, 26)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("advwp.button.modbutton.tooltip")))
-                .build());
-        modButton.visible = false;
-        BetterAdvancementsHelper.syncModButton(modButton, this.width, this.height, this.internalWidth, this.internalHeight);
+        advWp_delegate.setAdvancementsLastScreen(advWp_delegate.getParentScreen());
     }
 
     @Inject(method = "extractRenderState", at = @At("RETURN"))
     private void onRender(GuiGraphicsExtractor g, int mx, int my, float pt, CallbackInfo ci) {
-        super.extractRenderState(g, mx, my, pt);
-        if (modButton != null && modButton.visible) {
-            BetterAdvancementsHelper.syncModButton(modButton, this.width, this.height, this.internalWidth, this.internalHeight);
-            int ix = modButton.getX() + (modButton.getWidth() - 20) / 2;
-            int iy = modButton.getY() + (modButton.getHeight() - 20) / 2;
-            g.blit(RenderPipelines.GUI_TEXTURED,
-                    Identifier.fromNamespaceAndPath(AdvancementWaypoints.MOD_ID, "textures/logo.png"),
-                    ix, iy, 0f, 0f, 20, 20, 20, 20);
-        }
         advWp_delegate.renderContextMenu(g, mx, my, pt);
+    }
+
+    @Inject(method = "onAdvancementsCleared", at = @At("HEAD"))
+    private void onAdvCleared(CallbackInfo ci) {
+        BetterAdvancementTab.scrollHistory.clear();
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
@@ -84,7 +71,7 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
         }
         advWp_press = new AdvancementScreenHandler.ButtonState(event.x(), event.y(), event.button());
 
-        if (event.button() == 1 && BetterAdvancementsHelper.isTabHeaderClicked(this.width, this.height, internalWidth, internalHeight, event.x(), event.y())) {
+        if (event.button() == 1 && BetterAdvancementsHelper.isTabHeaderClicked(tabs, this.width, this.height, internalWidth, internalHeight, tabPage, event.x(), event.y())) {
             cir.setReturnValue(true);
         }
     }
@@ -114,7 +101,7 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
                 if (btn == 0) {
                     if (WaypointStorage.isBranchHidden(idStr)) {
                         WaypointStorage.setBranchHidden(idStr, false);
-                    } else {
+                    } else if (com.listraind.advancementwaypoints.config.ModConfig.getInstance().isEnableNavigation()) {
                         Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
                         advWp_delegate.handleLeftClick(id, targets);
                     }
@@ -123,8 +110,20 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
                     advWp_delegate.showContextMenu(mx, my, id, parsed);
                 }
             });
-        } else if (btn == 1 && BetterAdvancementsHelper.isTabHeaderClicked(this.width, this.height, internalWidth, internalHeight, mx, my)) {
-            advWp_delegate.showTabContextMenu(mx, my);
+        } else if (btn == 1) {
+            BetterAdvancementTab clickedTab = BetterAdvancementsHelper.findClickedTab(tabs, this.width, this.height, internalWidth, internalHeight, tabPage, mx, my);
+            if (clickedTab != null) {
+                String rootId = (clickedTab.getRootNode() != null) ? clickedTab.getRootNode().holder().id().toString() : null;
+                advWp_delegate.showTabContextMenu(mx, my, rootId);
+            }
+        }
+    }
+
+    @Inject(method = "onClose", at = @At("HEAD"))
+    private void onScreenClose(CallbackInfo ci) {
+        advWp_delegate.resetSelectMode();
+        if (advWp_delegate.getParentScreen() != null) {
+            minecraft.gui.setScreen(advWp_delegate.getParentScreen());
         }
     }
 
@@ -132,12 +131,6 @@ public abstract class BetterAdvancementsScreenMixin extends Screen implements IA
     @Override public void advWaypoint_setScreenToOpen(Screen s) { advWp_delegate.setScreenToOpen(s); }
     @Override public void advWaypoint_setParentScreen(Screen screen) { advWp_delegate.setParentScreen(screen); }
     @Override public boolean advWaypoint_isMouseOverContextMenu(double mx, double my) { return advWp_delegate.isMouseOverContextMenu(mx, my); }
-
-    @Override
-    public void onClose() {
-        advWp_delegate.resetSelectMode();
-        minecraft.gui.setScreen(advWp_delegate.getParentScreen());
-    }
 
     @Override
     public void advWp_recalculateAll() {

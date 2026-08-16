@@ -207,29 +207,14 @@ public class WaypointStorage {
    }
 
    public static void deleteWaypoint(String id) {
+      if (id == null || id.isEmpty()) {
+         return;
+      }
       Path folder = waypointsFolder();
       if (Files.exists(folder, new LinkOption[0])) {
          List<Path> jsonFiles;
-         try {
-            Stream<Path> stream = Files.list(folder);
-
-            try {
-               jsonFiles = (List)stream.filter((px) -> px.toString().endsWith(".json")).collect(Collectors.toList());
-            } catch (Throwable var13) {
-               if (stream != null) {
-                  try {
-                     stream.close();
-                  } catch (Throwable var11) {
-                     var13.addSuppressed(var11);
-                  }
-               }
-
-               throw var13;
-            }
-
-            if (stream != null) {
-               stream.close();
-            }
+         try (Stream<Path> stream = Files.list(folder)) {
+            jsonFiles = stream.filter((px) -> px.toString().endsWith(".json")).collect(Collectors.toList());
          } catch (Exception var14) {
             return;
          }
@@ -282,6 +267,68 @@ public class WaypointStorage {
                   ConfigIO.writeArray(file, contents);
                }
             }
+         }
+
+         setBranchHidden(id, false);
+         setTabHidden(id, false);
+         AdvancementWaypointsClient.reloadAdvancements();
+      }
+   }
+
+   public static void deleteWaypointWithChildren(String id) {
+      if (id == null || id.isEmpty()) {
+         return;
+      }
+      Path folder = waypointsFolder();
+      if (Files.exists(folder, new LinkOption[0])) {
+         List<Path> jsonFiles;
+         try (Stream<Path> stream = Files.list(folder)) {
+            jsonFiles = stream.filter((px) -> px.toString().endsWith(".json")).collect(Collectors.toList());
+         } catch (Exception e) {
+            return;
+         }
+
+         Set<String> toDelete = new HashSet<>();
+         toDelete.add(id);
+
+         List<JsonObject> allWaypoints = new ArrayList<>();
+         for (Path file : jsonFiles) {
+            allWaypoints.addAll(ConfigIO.readArray(file));
+         }
+
+         boolean added = true;
+         while (added) {
+            added = false;
+            for (JsonObject obj : allWaypoints) {
+               String objId = ConfigIO.str(obj, "id", "");
+               String parent = ConfigIO.nullable(obj, "parent");
+               if (!objId.isEmpty() && parent != null && toDelete.contains(parent)) {
+                  if (toDelete.add(objId)) {
+                     added = true;
+                  }
+               }
+            }
+         }
+
+         for (Path file : jsonFiles) {
+            List<JsonObject> contents = ConfigIO.readArray(file);
+            int sizeBefore = contents.size();
+            contents.removeIf((ox) -> toDelete.contains(ConfigIO.str(ox, "id", "")));
+            if (contents.size() != sizeBefore) {
+               if (contents.isEmpty()) {
+                  try {
+                     Files.deleteIfExists(file);
+                  } catch (Exception ignored) {
+                  }
+               } else {
+                  ConfigIO.writeArray(file, contents);
+               }
+            }
+         }
+
+         for (String deletedId : toDelete) {
+            setBranchHidden(deletedId, false);
+            setTabHidden(deletedId, false);
          }
 
          AdvancementWaypointsClient.reloadAdvancements();
@@ -422,6 +469,7 @@ public class WaypointStorage {
          }
 
          saveHiddenBranches(set);
+         onBranchVisibilityChanged();
       }
    }
 
@@ -435,6 +483,14 @@ public class WaypointStorage {
          }
 
          saveHiddenBranches(set);
+         onBranchVisibilityChanged();
+      }
+   }
+
+   public static void onBranchVisibilityChanged() {
+      net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+      if (mc.gui.screen() instanceof com.listraind.advancementwaypoints.compat.IBetterAdvancementsScreen screen) {
+         screen.advWp_recalculateAll();
       }
    }
 

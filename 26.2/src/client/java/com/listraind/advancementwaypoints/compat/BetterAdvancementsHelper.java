@@ -1,13 +1,14 @@
 package com.listraind.advancementwaypoints.compat;
 
 import betteradvancements.common.gui.BetterAdvancementTab;
+import betteradvancements.common.gui.BetterAdvancementTabType;
 import betteradvancements.common.gui.BetterAdvancementWidget;
 import com.listraind.advancementwaypoints.AdvancementWaypoints;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
 import com.listraind.advancementwaypoints.mixin.compat.BetterAdvancementTabAccessor;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementNode;
-import net.minecraft.client.gui.components.Button;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -16,29 +17,39 @@ public class BetterAdvancementsHelper {
 
     private static Method cachedIsMouseOverMethod;
 
-    public static void syncModButton(Button modButton, int screenWidth, int screenHeight, int internalWidth, int internalHeight) {
-        if (modButton == null) return;
-        int panelLeft = (screenWidth - internalWidth) / 2 + 30;
-        int panelTop = (screenHeight - internalHeight) / 2 + 40;
-        int panelRight = panelLeft + internalWidth - 70;
-
-        int btnW = 26, btnH = 26;
-        int gap = 5;
-        int btnX = Math.max(2, Math.min(panelRight - btnW - gap, screenWidth - btnW - 2));
-        int btnY = Math.max(2, Math.min(panelTop + 20, screenHeight - btnH - 2));
-
-        modButton.setX(btnX);
-        modButton.setY(btnY);
-        modButton.setWidth(btnW);
-        modButton.setHeight(btnH);
+    public static boolean isTabHeaderClicked(
+            Map<AdvancementHolder, BetterAdvancementTab> tabs,
+            int screenWidth, int screenHeight, int internalWidth, int internalHeight,
+            int tabPage, double mx, double my
+    ) {
+        return findClickedTab(tabs, screenWidth, screenHeight, internalWidth, internalHeight, tabPage, mx, my) != null;
     }
 
-    public static boolean isTabHeaderClicked(int screenWidth, int screenHeight, int internalWidth, int internalHeight, double mx, double my) {
+    @Nullable
+    public static BetterAdvancementTab findClickedTab(
+            Map<AdvancementHolder, BetterAdvancementTab> tabs,
+            int screenWidth, int screenHeight, int internalWidth, int internalHeight,
+            int tabPage, double mx, double my
+    ) {
+        if (tabs == null || tabs.isEmpty()) return null;
         int left = 30 + (screenWidth - internalWidth) / 2;
         int top = 40 + (screenHeight - internalHeight) / 2;
-        return my >= top - 36 && my <= top + 24 && mx >= left - 20 && mx <= left + internalWidth + 20;
+        int right = internalWidth - 30 + (screenWidth - internalWidth) / 2;
+        int bottom = internalHeight - 30 + (screenHeight - internalHeight) / 2;
+        int width = right - left;
+        int height = bottom - top;
+        int maxTabs = BetterAdvancementTabType.getMaxTabs(width, height);
+        int skip = tabPage * maxTabs;
+
+        for (BetterAdvancementTab tab : tabs.values().stream().skip(skip).limit(maxTabs).toList()) {
+            if (tab.isMouseOver(left, top, width, height, mx, my)) {
+                return tab;
+            }
+        }
+        return null;
     }
 
+    @Nullable
     public static AdvancementHolder findHoveredHolder(
             BetterAdvancementTab selectedTab, float zoom,
             int screenWidth, int screenHeight, int internalWidth, int internalHeight,
@@ -49,16 +60,21 @@ public class BetterAdvancementsHelper {
         BetterAdvancementTabAccessor tab = (BetterAdvancementTabAccessor) selectedTab;
         int left = 30 + (screenWidth - internalWidth) / 2;
         int top = 40 + (screenHeight - internalHeight) / 2;
+        int right = internalWidth - 30 + (screenWidth - internalWidth) / 2;
+        int bottom = internalHeight - 30 + (screenHeight - internalHeight) / 2;
 
-        boolean inGui = mx < (double) (left + internalWidth - 60 - 9)
-                && mx > (double) (left + 9)
-                && my < (double) (top + internalHeight - 40 + 1)
-                && my > (double) (top + 18);
+        int boxLeft = left + 9;
+        int boxTop = top + 18;
+        int boxRight = right - 9;
+        int boxBottom = bottom - 9;
+
+        boolean inGui = mx >= (double) boxLeft && mx <= (double) boxRight
+                && my >= (double) boxTop && my <= (double) boxBottom;
 
         if (!inGui) return null;
 
-        double relX = mx - left - 9.0;
-        double relY = my - top - 18.0;
+        double relX = mx - (double) boxLeft;
+        double relY = my - (double) boxTop;
 
         boolean isPlaneAdv = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("planeadvancements")
                 && com.listraind.advancementwaypoints.compat.PlaneAdvancementsHelper.isPlaneTab(selectedTab);
@@ -78,7 +94,7 @@ public class BetterAdvancementsHelper {
             for (Object w : widgets) {
                 boolean hovered;
                 if (isPlaneAdv) {
-                    hovered = com.listraind.advancementwaypoints.compat.PlaneAdvancementsHelper.isWidgetHovered(w, scrollX, scrollY, mx, my, left + 9, top + 18);
+                    hovered = com.listraind.advancementwaypoints.compat.PlaneAdvancementsHelper.isWidgetHovered(w, scrollX, scrollY, mx, my, boxLeft, boxTop);
                 } else if (w instanceof BetterAdvancementWidget bw) {
                     hovered = bw.isMouseOver(scrollX, scrollY, relX, relY, zoom);
                 } else {
@@ -94,13 +110,15 @@ public class BetterAdvancementsHelper {
                 if (!hovered) continue;
 
                 AdvancementHolder holder = null;
+                AdvancementNode node = null;
                 if (isPlaneAdv) {
-                    AdvancementNode node = com.listraind.advancementwaypoints.compat.PlaneAdvancementsHelper.getAdvancementNode(w);
+                    node = com.listraind.advancementwaypoints.compat.PlaneAdvancementsHelper.getAdvancementNode(w);
                     if (node != null) holder = node.holder();
                 }
                 if (holder == null && w instanceof BetterAdvancementWidget bw) {
-                    if (bw.getAdvancement() != null) {
-                        holder = bw.getAdvancement().holder();
+                    node = bw.getAdvancement();
+                    if (node != null) {
+                        holder = node.holder();
                     } else {
                         for (Map.Entry<AdvancementHolder, BetterAdvancementWidget> entry : tab.getWidgets().entrySet()) {
                             if (entry.getValue() == bw) {
@@ -109,6 +127,10 @@ public class BetterAdvancementsHelper {
                             }
                         }
                     }
+                }
+
+                if (node != null && WaypointStorage.isNodeHidden(node)) {
+                    continue;
                 }
 
                 if (holder != null) {

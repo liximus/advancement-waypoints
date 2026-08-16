@@ -143,12 +143,8 @@ public class AdvancementScreenHandler {
                 Identifier id = targetNode.holder().id();
                 String idStr = id.toString();
                 if (btn == 0) {
-                    if (WaypointStorage.isBranchHidden(idStr)) {
-                        WaypointStorage.setBranchHidden(idStr, false);
-                    } else if (com.listraind.advancementwaypoints.config.ModConfig.getInstance().isEnableNavigation()) {
-                        Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
-                        handleLeftClick(id, targets);
-                    }
+                    Map<Navigator.Dimension, List<BlockPos>> targets = CoordParser.parseForNavigation(d.getDescription().getString());
+                    handleLeftClick(id, targets);
                 } else if (btn == 1) {
                     Map<Navigator.Dimension, List<BlockPos>> parsed = CoordParser.parseForNavigation(d.getDescription().getString());
                     showContextMenu(mx, my, id, parsed);
@@ -199,18 +195,74 @@ public class AdvancementScreenHandler {
         if (selectMode) {
             if (selectCallback != null) selectCallback.accept(id);
             Minecraft.getInstance().gui.setScreen(resolveTargetScreen(null));
-        } else {
-            Navigator nav = Navigator.getInstance();
-            if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
-                nav.clearAll();
-                nav.setCurrentId(id);
-                targets.forEach((dim, posList) -> {
-                    if (posList != null) nav.setTargets(dim, posList);
-                });
-            } else {
-                nav.clearAll();
+            return;
+        }
+
+        Minecraft mc = Minecraft.getInstance();
+        net.minecraft.world.entity.player.Player player = mc.player;
+        boolean hasTpPerms = player != null && player.canUseGameMasterBlocks();
+        com.listraind.advancementwaypoints.config.ModConfig.LeftClickAction action =
+                com.listraind.advancementwaypoints.config.ModConfig.getInstance().getLeftClickAction();
+
+        switch (action) {
+            case TOGGLE_BRANCH -> {
+                WaypointStorage.toggleBranchHidden(id.toString());
             }
-            if (targets != null) Minecraft.getInstance().gui.setScreen(null);
+            case TELEPORT -> {
+                if (hasTpPerms && targets != null && player != null) {
+                    Navigator.Dimension currentDim = Navigator.Dimension.from(player.level().dimension());
+                    List<BlockPos> currentDimPos = currentDim != null ? targets.get(currentDim) : null;
+                    if (currentDimPos != null && !currentDimPos.isEmpty()) {
+                        BlockPos target = Navigator.nearestOf(currentDimPos, player.blockPosition());
+                        if (target != null) {
+                            teleportTo(mc, target);
+                            return;
+                        }
+                    }
+                }
+            }
+            case TELEPORT_IF_POSSIBLE -> {
+                if (hasTpPerms && targets != null && player != null) {
+                    Navigator.Dimension currentDim = Navigator.Dimension.from(player.level().dimension());
+                    List<BlockPos> currentDimPos = currentDim != null ? targets.get(currentDim) : null;
+                    if (currentDimPos != null && !currentDimPos.isEmpty()) {
+                        BlockPos target = Navigator.nearestOf(currentDimPos, player.blockPosition());
+                        if (target != null) {
+                            teleportTo(mc, target);
+                            return;
+                        }
+                    }
+                }
+                startNavigation(id, targets);
+            }
+            default -> { // NAVIGATE
+                if (WaypointStorage.isBranchHidden(id.toString())) {
+                    WaypointStorage.setBranchHidden(id.toString(), false);
+                }
+                startNavigation(id, targets);
+            }
+        }
+    }
+
+    private void startNavigation(Identifier id, @Nullable Map<Navigator.Dimension, List<BlockPos>> targets) {
+        if (!com.listraind.advancementwaypoints.config.ModConfig.getInstance().isEnableNavigation()) return;
+        Navigator nav = Navigator.getInstance();
+        if (!java.util.Objects.equals(nav.getCurrentId(), id) && targets != null) {
+            nav.clearAll();
+            nav.setCurrentId(id);
+            targets.forEach((dim, posList) -> {
+                if (posList != null) nav.setTargets(dim, posList);
+            });
+        } else {
+            nav.clearAll();
+        }
+        if (targets != null) Minecraft.getInstance().gui.setScreen(null);
+    }
+
+    private static void teleportTo(Minecraft minecraft, BlockPos target) {
+        if (minecraft.player != null && minecraft.player.connection != null) {
+            minecraft.player.connection.sendCommand("tp " + target.getX() + " " + target.getY() + " " + target.getZ());
+            minecraft.gui.setScreen(null);
         }
     }
 
@@ -221,7 +273,13 @@ public class AdvancementScreenHandler {
     }
 
     public void showTabContextMenu(double mx, double my) {
-        showTabContextMenu(mx, my, null);
+        showTabContextMenu(mx, my, (String) null);
+    }
+
+    public void showTabContextMenu(double mx, double my, @Nullable String rootId) {
+        if (contextMenu == null) contextMenu = new AdvancementContextMenu();
+        contextMenu.showTabMenu((int) mx, (int) my, rootId);
+        contextMenu.setLastScreen(advancementsLastScreen);
     }
 
     public void showTabContextMenu(double mx, double my, @Nullable AdvancementTab tab) {

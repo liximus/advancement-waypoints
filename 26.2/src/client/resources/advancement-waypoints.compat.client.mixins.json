@@ -9,6 +9,7 @@
 		"BetterAdvancementTabMixin",
 		"BetterAdvancementTabAccessor",
 		"BetterAdvancementWidgetMixin",
+		"BetterAdvancementWidgetAccessor",
 		"PlaneAdvancementWidgetMixin"
 	],
 	"injectors": {

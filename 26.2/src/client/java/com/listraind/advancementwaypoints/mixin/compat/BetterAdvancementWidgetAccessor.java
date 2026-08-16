@@ -1,5 +1,16 @@
 package com.listraind.advancementwaypoints.mixin.compat;
 
+import betteradvancements.common.gui.BetterAdvancementWidget;
+import net.minecraft.advancements.AdvancementNode;
+import net.minecraft.advancements.DisplayInfo;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Accessor;
+
+@Mixin(value = {BetterAdvancementWidget.class}, remap = false)
 public interface BetterAdvancementWidgetAccessor {
-   boolean isMouseOver(int var1, int var2, int var3, int var4);
+    @Accessor
+    AdvancementNode getAdvancementNode();
+
+    @Accessor
+    DisplayInfo getDisplayInfo();
 }

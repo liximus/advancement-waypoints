@@ -38,8 +38,10 @@ public abstract class ClientAdvancementsMixin implements IAdvancementInjector {
 
     @Override
     public void advWaypoint_inject() {
-        if (advWp_treeManager == null || !advWp_treeManager.isCompatible(tree, progress, listener)) {
+        if (advWp_treeManager == null || !advWp_treeManager.isCompatible(tree, progress)) {
             advWp_treeManager = new AdvancementTreeManager(tree, progress, listener);
+        } else {
+            advWp_treeManager.setListener(listener);
         }
         advWp_treeManager.inject();
     }

@@ -17,6 +17,8 @@ public class YaclConfigScreen {
    private static Option<Boolean> enableNavigationOpt;
    private static Option<ModConfig.HudMode> hudModeOpt;
    private static Option<ModConfig.HudPosition> hudPositionOpt;
+   private static Option<Integer> hudScaleOpt;
+   private static Option<Integer> hudOffsetOpt;
    private static Option<Boolean> showDistanceOpt;
    private static Option<Boolean> showItemOpt;
    private static Option<Integer> autoDisableRadiusOpt;
@@ -42,6 +44,22 @@ public class YaclConfigScreen {
             .description(OptionDescription.of(Component.translatable("advwp.config.hud_position.desc")))
             .binding(ModConfig.HudPosition.BOTTOM_RIGHT, config::getHudPosition, (Consumer<ModConfig.HudPosition>) config::setHudPosition)
             .controller(opt -> EnumControllerBuilder.create(opt).enumClass(ModConfig.HudPosition.class))
+            .available(navEnabled && !isLocatorMode)
+            .build();
+
+      hudScaleOpt = Option.<Integer>createBuilder()
+            .name(Component.translatable("advwp.config.hud_scale"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.hud_scale.desc")))
+            .binding(100, config::getHudScale, (Consumer<Integer>) config::setHudScale)
+            .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(50, 200).step(5).formatValue(v -> Component.literal(v + "%")))
+            .available(navEnabled && !isLocatorMode)
+            .build();
+
+      hudOffsetOpt = Option.<Integer>createBuilder()
+            .name(Component.translatable("advwp.config.hud_offset"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.hud_offset.desc")))
+            .binding(10, config::getHudOffset, (Consumer<Integer>) config::setHudOffset)
+            .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(0, 100).step(1).formatValue(v -> Component.literal(v + " px")))
             .available(navEnabled && !isLocatorMode)
             .build();
 
@@ -116,6 +134,13 @@ public class YaclConfigScreen {
             })
             .build();
 
+      Option<ModConfig.LeftClickAction> leftClickActionOpt = Option.<ModConfig.LeftClickAction>createBuilder()
+            .name(Component.translatable("advwp.config.left_click_action"))
+            .description(OptionDescription.of(Component.translatable("advwp.config.left_click_action.desc")))
+            .binding(ModConfig.LeftClickAction.NAVIGATE, config::getLeftClickAction, (Consumer<ModConfig.LeftClickAction>) config::setLeftClickAction)
+            .controller(opt -> EnumControllerBuilder.create(opt).enumClass(ModConfig.LeftClickAction.class))
+            .build();
+
       Option<Boolean> allowAttachToAnyNodeOpt = Option.<Boolean>createBuilder()
             .name(Component.translatable("advwp.config.allow_attach_to_any_node"))
             .description(OptionDescription.of(Component.translatable("advwp.config.allow_attach_to_any_node.desc")))
@@ -133,6 +158,8 @@ public class YaclConfigScreen {
             .option(enableNavigationOpt)
             .option(hudModeOpt)
             .option(hudPositionOpt)
+            .option(hudScaleOpt)
+            .option(hudOffsetOpt)
             .option(showDistanceOpt)
             .option(showItemOpt)
             .option(autoDisableRadiusOpt)
@@ -143,6 +170,7 @@ public class YaclConfigScreen {
 
       ConfigCategory waypointManagementCategory = ConfigCategory.createBuilder()
             .name(Component.translatable("advwp.config.category.waypoint_management"))
+            .option(leftClickActionOpt)
             .option(allowAttachToAnyNodeOpt)
             .build();
 
@@ -160,6 +188,8 @@ public class YaclConfigScreen {
       if (hudModeOpt != null) hudModeOpt.setAvailable(navEnabled);
       boolean isLoc = mode == ModConfig.HudMode.LOCATOR;
       if (hudPositionOpt != null) hudPositionOpt.setAvailable(navEnabled && !isLoc);
+      if (hudScaleOpt != null) hudScaleOpt.setAvailable(navEnabled && !isLoc);
+      if (hudOffsetOpt != null) hudOffsetOpt.setAvailable(navEnabled && !isLoc);
       if (showDistanceOpt != null) showDistanceOpt.setAvailable(navEnabled && isLoc);
       if (showItemOpt != null) showItemOpt.setAvailable(navEnabled && isLoc);
       if (autoDisableRadiusOpt != null) autoDisableRadiusOpt.setAvailable(navEnabled);
