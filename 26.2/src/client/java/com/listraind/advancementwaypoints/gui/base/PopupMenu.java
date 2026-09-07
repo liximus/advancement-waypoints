@@ -188,7 +188,7 @@ public class PopupMenu {
 
    public void render(GuiGraphicsExtractor g, int mx, int my, float pt) {
       if (this.visible) {
-         g.blit(RenderPipelines.GUI_TEXTURED, ModBackground.current(), this.x, this.y, 0.0F, 0.0F, this.menuWidth, this.menuHeight, this.menuWidth, this.menuHeight);
+         ModBackground.render(g, this.x, this.y, this.menuWidth, this.menuHeight);
 
          for(int i = 0; i < this.textButtons.size(); ++i) {
             Button btn = (Button)this.textButtons.get(i);
@@ -209,7 +209,8 @@ public class PopupMenu {
                int iconSize = 11;
                int ix = bx + 4;
                int iy = by + (bh - iconSize) / 2;
-               g.blit(RenderPipelines.GUI_TEXTURED, item.icon, ix, iy, 0.0F, 0.0F, iconSize, iconSize, iconSize, iconSize);
+               int color = btn.active ? 0xFFFFFFFF : 0xFF777777;
+               g.blit(RenderPipelines.GUI_TEXTURED, item.icon, ix, iy, 0.0F, 0.0F, iconSize, iconSize, iconSize, iconSize, color);
             }
          }
 
@@ -232,7 +233,8 @@ public class PopupMenu {
                int iconSize = Math.min(14, bw - 4);
                int ix = bx + (bw - iconSize) / 2;
                int iy = by + (bh - iconSize) / 2;
-               g.blit(RenderPipelines.GUI_TEXTURED, item.icon, ix, iy, 0.0F, 0.0F, iconSize, iconSize, iconSize, iconSize);
+               int color = btn.active ? 0xFFFFFFFF : 0xFF777777;
+               g.blit(RenderPipelines.GUI_TEXTURED, item.icon, ix, iy, 0.0F, 0.0F, iconSize, iconSize, iconSize, iconSize, color);
             }
          }
 

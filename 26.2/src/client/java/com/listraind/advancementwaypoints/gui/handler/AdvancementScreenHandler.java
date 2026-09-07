@@ -198,6 +198,11 @@ public class AdvancementScreenHandler {
             return;
         }
 
+        if (WaypointStorage.isBranchHidden(id.toString())) {
+            WaypointStorage.setBranchHidden(id.toString(), false);
+            return;
+        }
+
         Minecraft mc = Minecraft.getInstance();
         net.minecraft.world.entity.player.Player player = mc.player;
         boolean hasTpPerms = player != null && player.canUseGameMasterBlocks();
@@ -236,9 +241,6 @@ public class AdvancementScreenHandler {
                 startNavigation(id, targets);
             }
             default -> {
-                if (WaypointStorage.isBranchHidden(id.toString())) {
-                    WaypointStorage.setBranchHidden(id.toString(), false);
-                }
                 startNavigation(id, targets);
             }
         }

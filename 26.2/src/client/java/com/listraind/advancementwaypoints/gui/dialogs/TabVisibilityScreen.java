@@ -1,5 +1,6 @@
 package com.listraind.advancementwaypoints.gui.dialogs;
 
+import com.listraind.advancementwaypoints.DarkModeChecker;
 import com.listraind.advancementwaypoints.config.WaypointStorage;
 import com.listraind.advancementwaypoints.gui.base.BaseModScreen;
 import net.minecraft.advancements.AdvancementNode;
@@ -26,6 +27,10 @@ public class TabVisibilityScreen extends BaseModScreen {
     private static final int VISIBLE_ROWS = 6;
     private static final int SCROLLBAR_WIDTH = 12;
     private static final int SCROLLBAR_HANDLE_HEIGHT = 15;
+    private static final int TEXT_COLOR_LIGHT = 0xFF333333;
+    private static final int TEXT_COLOR_DARK = 0xFFFFFFFF;
+    private static final int TITLE_COLOR_LIGHT = -14540254;
+    private static final int TITLE_COLOR_DARK = 0xFFFFFFFF;
 
     private final Screen parentScreen;
 
@@ -53,6 +58,7 @@ public class TabVisibilityScreen extends BaseModScreen {
     public TabVisibilityScreen(Screen parentScreen) {
         super(Component.translatable("advwp.screen.tab_visibility"), 280, 210);
         this.parentScreen = parentScreen;
+        this.titleColor = DarkModeChecker.isDarkModeEnabled() ? TITLE_COLOR_DARK : TITLE_COLOR_LIGHT;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
@@ -175,7 +181,11 @@ public class TabVisibilityScreen extends BaseModScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float d) {
+        boolean isDark = DarkModeChecker.isDarkModeEnabled();
+        this.titleColor = isDark ? TITLE_COLOR_DARK : TITLE_COLOR_LIGHT;
         super.extractRenderState(g, mx, my, d);
+
+        int textColor = isDark ? TEXT_COLOR_DARK : TEXT_COLOR_LIGHT;
 
         for (int r = 0; r < VISIBLE_ROWS; r++) {
             int idx = scrollRow + r;
@@ -195,7 +205,7 @@ public class TabVisibilityScreen extends BaseModScreen {
                 String str = font.plainSubstrByWidth(title.getString(), maxTextWidth - 8) + "...";
                 title = Component.literal(str);
             }
-            g.text(font, title, textX, textY + 2, 0xFF333333, false);
+            g.text(font, title, textX, textY + 2, textColor, false);
         }
 
         if (maxRow() > 0) {

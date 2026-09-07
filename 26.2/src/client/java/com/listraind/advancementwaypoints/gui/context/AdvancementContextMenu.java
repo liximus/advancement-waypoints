@@ -26,10 +26,15 @@ import static com.listraind.advancementwaypoints.AdvancementWaypoints.MOD_ID;
 
 public class AdvancementContextMenu {
 
-    private static final Identifier CREATE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/create.png");
-    private static final Identifier EDIT_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/edit.png");
-    private static final Identifier DELETE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/delete.png");
-    private static final Identifier HIDE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/hide.png");
+    private static final Identifier WP_CREATE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/create.png");
+    private static final Identifier WP_EDIT_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/edit.png");
+    private static final Identifier WP_DELETE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/delete.png");
+    private static final Identifier WP_HIDE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/wpmenu/hide.png");
+
+    private static final Identifier TAB_CREATE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/tabmenu/create.png");
+    private static final Identifier TAB_EDIT_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/tabmenu/edit.png");
+    private static final Identifier TAB_DELETE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/tabmenu/delete.png");
+    private static final Identifier TAB_HIDE_ICON = Identifier.fromNamespaceAndPath(MOD_ID, "textures/gui/sprites/tabmenu/hide.png");
 
     private final PopupMenu menu = new PopupMenu();
     private TargetSelectionMenu targetSelectionMenu;
@@ -80,22 +85,20 @@ public class AdvancementContextMenu {
 
         boolean isBranchHidden = WaypointStorage.isBranchHidden(id.toString());
         boolean hasChildren = WaypointStorage.hasChildren(id);
-        if (hasChildren || isBranchHidden) {
-            Component branchButtonLabel = Component.translatable(
-                    isBranchHidden ? "advwp.context.show_branch" : "advwp.context.hide_branch"
-            );
-            menu.addTextButton(branchButtonLabel, () -> {
-                WaypointStorage.toggleBranchHidden(id.toString());
-                hide();
-            });
-        }
-
         boolean canCreate = isCustom || !hasChildren || com.listraind.advancementwaypoints.config.ModConfig.getInstance().isAllowAttachToAnyNode();
 
-        menu.addSquareButton(null, Component.translatable("advwp.context.sq_none"), null, false);
-        menu.addSquareButton(CREATE_ICON, Component.translatable("advwp.context.sq_new"), () -> onSquareAction(1), canCreate);
-        menu.addSquareButton(EDIT_ICON, Component.translatable("advwp.context.sq_edit"), () -> onSquareAction(2), isCustom);
-        menu.addSquareButton(DELETE_ICON, Component.translatable("advwp.context.sq_del"), () -> onSquareAction(3), isCustom);
+        menu.addSquareButton(WP_CREATE_ICON, Component.translatable("advwp.context.sq_new"), () -> onSquareAction(1), canCreate);
+        menu.addSquareButton(WP_EDIT_ICON, Component.translatable("advwp.context.sq_edit"), () -> onSquareAction(2), isCustom);
+        menu.addSquareButton(WP_DELETE_ICON, Component.translatable("advwp.context.sq_del"), () -> onSquareAction(3), isCustom);
+        menu.addSquareButton(
+                WP_HIDE_ICON,
+                Component.translatable(isBranchHidden ? "advwp.context.show_branch" : "advwp.context.hide_branch"),
+                () -> {
+                    WaypointStorage.toggleBranchHidden(id.toString());
+                    hide();
+                },
+                hasChildren || isBranchHidden
+        );
 
         menu.show(mouseX, mouseY);
     }
@@ -134,13 +137,13 @@ public class AdvancementContextMenu {
         final boolean finalIsCustom = isCustom;
         final boolean hasTab = (finalRootId != null);
 
-        menu.addSquareButton(CREATE_ICON, Component.translatable("advwp.context.create_tab"), () -> {
+        menu.addSquareButton(TAB_CREATE_ICON, Component.translatable("advwp.context.create_tab"), () -> {
             CreateWaypointScreen screen = new CreateWaypointScreen(true);
             screen.onCloseAction = () -> reopenAdvancementsScreen(minecraft);
             minecraft.gui.setScreen(screen);
         }, true);
 
-        menu.addSquareButton(EDIT_ICON, Component.translatable("advwp.context.sq_edit"), () -> {
+        menu.addSquareButton(TAB_EDIT_ICON, Component.translatable("advwp.context.sq_edit"), () -> {
             if (finalRootId != null) {
                 JsonObject data = WaypointStorage.getWaypointOrVanilla(Identifier.parse(finalRootId));
                 EditWaypointScreen screen = new EditWaypointScreen(data);
@@ -149,7 +152,7 @@ public class AdvancementContextMenu {
             }
         }, hasTab && finalIsCustom);
 
-        menu.addSquareButton(DELETE_ICON, Component.translatable("advwp.context.sq_del"), () -> {
+        menu.addSquareButton(TAB_DELETE_ICON, Component.translatable("advwp.context.sq_del"), () -> {
             if (finalRootId != null) {
                 Screen nextScreen = new AdvancementsScreen(minecraft.player.connection.getAdvancements(), lastScreen);
                 boolean hasChildren = WaypointStorage.hasChildren(Identifier.parse(finalRootId));
@@ -181,7 +184,7 @@ public class AdvancementContextMenu {
             }
         }, hasTab && finalIsCustom);
 
-        menu.addSquareButton(HIDE_ICON, Component.translatable("advwp.context.hide_tab"), () -> {
+        menu.addSquareButton(TAB_HIDE_ICON, Component.translatable("advwp.context.hide_tab"), () -> {
             if (finalRootId != null) {
                 WaypointStorage.setTabHidden(finalRootId, true);
                 reopenAdvancementsScreen(minecraft);

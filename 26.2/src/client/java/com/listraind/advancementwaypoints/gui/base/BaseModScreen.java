@@ -29,7 +29,7 @@ public abstract class BaseModScreen extends Screen {
    protected abstract void initContent();
 
    public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float d) {
-      g.blit(RenderPipelines.GUI_TEXTURED, ModBackground.current(), this.panelX, this.panelY, 0.0F, 0.0F, this.panelWidth, this.panelHeight, this.panelWidth, this.panelHeight);
+      ModBackground.render(g, this.panelX, this.panelY, this.panelWidth, this.panelHeight);
       super.extractRenderState(g, mx, my, d);
       if (this.drawTitle && this.title != null) {
          int tx = this.panelX + (this.panelWidth - this.font.width(this.title)) / 2;

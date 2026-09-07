@@ -387,7 +387,6 @@ public abstract class WaypointFormScreen extends BaseModScreen {
       graphics.pose().scale(this.scale, this.scale);
       int scaledMouseX = (int)((float)mouseX / this.scale);
       int scaledMouseY = (int)((float)mouseY / this.scale);
-      graphics.blit(RenderPipelines.GUI_TEXTURED, ModBackground.current(), this.panelX, this.panelY, 0.0F, 0.0F, this.panelWidth, this.panelHeight, this.panelWidth, this.panelHeight);
       super.extractRenderState(graphics, scaledMouseX, scaledMouseY, delta);
       if (this.frameButton != null) {
          Identifier icon = this.getFrameIcon(this.savedFrame);
